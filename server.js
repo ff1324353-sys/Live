@@ -78,26 +78,22 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook via Proxy:', streamUrl);
 
-        const command = ffmpeg(streamUrl)
+            const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts'
+            '-fflags +discardcorrupt+genpts',
+            '-avioflags direct'
         ])
         .outputOptions([
-            '-c:v libx264',
-            '-preset superfast',   // ultrafast වෙනුවට superfast දාලා ප්‍රොසෙසර් බර අඩු කිරීම
-            '-b:v 1500k',          // බිට්රේට් එක ටිකක් අඩු කළා (සර්වර් එකට ලේසි වෙන්න)
-            '-maxrate 1500k',
-            '-bufsize 3000k',
-            '-pix_fmt yuv420p',
-            '-g 50',
-            '-c:a aac',
-            '-b:a 96k',            // ඕඩියෝ බිට්රේට් එක ටිකක් අඩු කළා
-            '-ar 44100',
+            '-c:v copy',     // වීඩියෝ එක ඩිරෙක්ට් කොපි කරන නිසා සර්වර් එක හිර වෙන්නේ/ලැග් වෙන්නේ නැත
+            '-c:a aac',      // ඕඩියෝ එක විතරක් aac වලට හරවයි
+            '-b:a 128k',
+            '-max_muxing_queue_size 9999', // බෆර් එක පිරී යාමෙන් ලයිව් එක කට් වීම වළක්වයි
             '-f flv'
         ])
+
 
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
