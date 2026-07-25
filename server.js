@@ -72,14 +72,15 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook from TS URL:', streamUrl);
 
-        const command = ffmpeg(streamUrl, { timeout: 432000 })
+                const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36\r\nReferer: https://www.fancode.com/\r\n"'
+            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36\r\nReferer: https://www.fancode.com/\r\n'
         ])
+
         .outputOptions([
             '-c:v copy',     
             '-c:a aac',      
