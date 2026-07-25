@@ -83,15 +83,11 @@ app.post('/start-fb-live', (req, res) => {
             '-fflags +discardcorrupt+genpts'
         ])
         
-        .outputOptions([
-            '-c:v copy',                           // වීඩියෝ එක කොපි කරයි (ලැග් වීම නැත)
-            '-c:a aac',                            
-            '-b:a 96k',
-            '-af', 'asetrate=44100*1.03,aresample=44100,volume=1.0', // සවුන්ඩ් එකේ පිච් එක සහ ස්පීඩ් එක ටිකක් වැඩි කර කොපිරයිට් බොට්ස්ලා සම්පූර්ණයෙන්ම රවටයි
-            '-async 1',                            
-            '-vsync cfr',                          
+  .outputOptions([
+            '-c:v copy',     // වීඩියෝ එක ඩිරෙක්ට් කොපි කරන නිසා සර්වර් එක හිර වෙන්නේ/ලැග් වෙන්නේ නැත
+            '-c:a aac',      // ඕඩියෝ එක aac කරයි
+            '-b:a 128k',
             '-f flv'
-        ])
 
 
 
