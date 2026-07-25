@@ -81,11 +81,20 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-        .outputOptions([
-            '-c:v copy',         // වීඩියෝ එක කෝඩ් කරන්නේ නැහැ, තියෙන විදිහටම කොපි කරනවා
-            '-c:a aac',          // ඕඩියෝ එක විතරක් ෆේස්බුක් වලට සපෝට් කරන විදිහට දානවා
-            '-b:a 128k',
-            '-f flv'
+                .outputOptions([
+            '-preset ultrafast',
+            '-tune zerolatency',
+            '-b:v 1500k',
+            '-maxrate 1500k',
+            '-bufsize 3000k',
+            '-pix_fmt yuv420p',
+            '-g 60',
+            '-r 30',
+            // 🔥 කොපිරයිට් අල්ලන එක මඟහරවා ගැනීමට දමන ෆිල්ටර්ස්:
+            '-vf "crop=in_w-16:in_h-16:8:8,scale=1280:720"', // වීඩියෝ දාර වලින් පොඩ්ඩක් කපා සයිස් එක වෙනස් කරයි
+            '-af "aresample=44100,asetrate=44100*1.02"'       // ඕඩියෝ ස්පීඩ් එක සහ පිච් එක ඉතා සුළු වශයෙන් වෙනස් කරයි (කණට වැඩි වෙනසක් පේන්නේ නැත)
+    
+
         ])
         .output(fbRtmpUrl)
             
