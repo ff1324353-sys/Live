@@ -82,21 +82,14 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-                                .outputOptions([
-            '-c:v libx264',
-            '-preset ultrafast',
-            '-tune zerolatency',
-            '-b:v 1200k',
-            '-maxrate 1200k',
-            '-bufsize 2400k',
-            '-pix_fmt yuv420p',
-            '-g 60',
-            '-r 30',
-            '-c:a aac',
+        .outputOptions([
+            '-c:v copy',                           // වීඩියෝ එක කෝඩ් කරන්නේ නැති නිසා ලැග් වීම සම්පූර්ණයෙන්ම නැති වේ
+            '-c:a aac',                            // ඕඩියෝ එක aac කරයි
             '-b:a 96k',
-            '-af', 'asetrate=44100*1.015,aresample=44100', // කෝට් ලකුණු වෙනම වෙන් කර ආරක්ෂිතව දී ඇත
+            '-af', 'asetrate=44100*1.015,aresample=44100', // කෝට් ප්‍රශ්න නැතිව කොපිරයිට් වළක්වන ඕඩියෝ ෆිල්ටර් එක
             '-f flv'
         ])
+
 
 
             
