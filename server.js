@@ -82,13 +82,22 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-                .outputOptions([
-            '-c:v copy',                         // වීඩියෝ එක ට්‍රාන්ස්කෝඩ් කරන්නේ නැහැ (සර්වර් එක හිර වෙන්නේ නැත)
-            '-c:a aac',                          
-            '-b:a 128k',
-            '-af "volume=0.9,highpass=f=200,lowpass=f=3000"', // ශබ්දයේ ෆ්‍රීක්වෙන්සි එක මාරු කර කොපිරයිට් බොට්ස්ලා රවටයි
+                        .outputOptions([
+            '-c:v libx264',                       // වීඩියෝ එක සැහැල්ලුවෙන් කෝඩ් කරයි
+            '-preset ultrafast',                  // සර්වර් CPU බර අවම කරයි
+            '-tune zerolatency',                  // ලයිව් ඩිලේ එක ඉවත් කරයි
+            '-b:v 1200k',                         // බිට්‍රේට් එක තරමක් අඩු කර සර්වර් එකට පහසු කරයි
+            '-maxrate 1200k',
+            '-bufsize 2400k',
+            '-pix_fmt yuv420p',
+            '-g 60',
+            '-r 30',
+            '-c:a aac',                           // ඕඩියෝ කෝඩෙක් එක
+            '-b:a 96k',
+            '-af "volume=0.9,highpass=f=200,lowpass=f=3000"', // කොපිරයිට් වළක්වන ශබ්ද ෆිල්ටර් එක
             '-f flv'
         ])
+
             
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
