@@ -12,7 +12,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true })); // HTML form data (URL-encoded) කියවා ගැනීමට
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 let activeStreamProcess = null;
@@ -54,12 +54,10 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක (HTML Form POST හැන්ඩ්ල් කිරීම)
-// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක (HTML Form POST හැන්ඩ්ල් කිරීම)
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    // 🔥 ඔයාට වැඩ කළ අර අලුත්ම TS ලින්ක් එක මෙතැනට දාන්න
     const streamUrl = "http://9937675.s05s.cc/live/fouaadkhadi/E7JWd8N9/150222.ts?token=ShoJV0NcEgMVXFAGAQNTBlFQUFZVDVBRV1MIA1wHUlVSCQIOUldTWg4aSUEXREVVBwg6DFUXC1UGBQJUChlAEEJdE2lZUBIDFQFcUFMGAAVESUcRWFhURgkEB14MDFVcBAlSGhJEWV0VAkdQVwgDBlZUR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUFZQBxcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJUV11SBRdM";
 
     if (!streamKey) {
@@ -74,24 +72,19 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook from TS URL:', streamUrl);
 
-    // .ts (Transport Stream) වලට අදාලව FFmpeg රීකනෙක්ට් සහ ಇನ್පුට් ඔප්ෂන්ස් ටික මෙන්න
-        const command = ffmpeg(streamUrl)
+    const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-        
-  .outputOptions([
+        .outputOptions([
             '-c:v copy',     // වීඩියෝ එක ඩිරෙක්ට් කොපි කරන නිසා සර්වර් එක හිර වෙන්නේ/ලැග් වෙන්නේ නැත
             '-c:a aac',      // ඕඩියෝ එක aac කරයි
             '-b:a 128k',
             '-f flv'
-
-
-
-            
+        ])
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
@@ -110,9 +103,6 @@ app.post('/start-fb-live', (req, res) => {
 
     res.send('<h2>Facebook Live started from server successfully! 🚀</h2><p>Your .ts stream is now piping to Facebook Live.</p>');
 });
-
-
-
 
 let activeViewers = 0;
 io.on('connection', (socket) => {
