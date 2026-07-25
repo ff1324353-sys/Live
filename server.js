@@ -58,8 +58,8 @@ app.get('/proxy', async (req, res) => {
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    // ඔයා දෙන්න ඕන `.m3u8` ලින්ක් එක මෙතැනට දාලා තියෙනවා (ඉන්පුට් එකේ නැතත් මෙතැනින් ඔටෝ ඇදගන්නවා)
-    const streamUrl = "https://tvsen7.aynascope.net/rEBp38Ax/index.m3u8";
+    // 🔥 ඔයාට වැඩ කළ අර අලුත්ම TS ලින්ක් එක මෙතැනට දාන්න
+    const streamUrl = "http://9937675.s05s.cc/live/fouaadkhadi/E7JWd8N9/150222.ts?token=ShoJV0NcEgMVXFAGAQNTBlFQUFZVDVBRV1MIA1wHUlVSCQIOUldTWg4aSUEXREVVBwg6DFUXC1UGBQJUChlAEEJdE2lZUBIDFQFcUFMGAAVESUcRWFhURgkEB14MDFVcBAlSGhJEWV0VAkdQVwgDBlZUR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUFZQBxcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJUV11SBRdM";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -71,13 +71,15 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting streaming to Facebook from URL:', streamUrl);
+    console.log('Starting streaming to Facebook from TS URL:', streamUrl);
 
-        const command = ffmpeg(streamUrl)
+    // .ts (Transport Stream) වලට අදාලව FFmpeg රීකනෙක්ට් සහ ಇನ್පුට් ඔප්ෂන්ස් ටික මෙන්න
+    const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
-            '-reconnect_delay_max 5'
+            '-reconnect_delay_max 5',
+            '-fflags +discardcorrupt+genpts' // .ts ෆයිල් වල ಸಿಂಕ್ ප්‍රශ්න මඟහරවා ගැනීමට
         ])
         .videoCodec('libx264')
         .audioCodec('aac')
@@ -85,17 +87,16 @@ app.post('/start-fb-live', (req, res) => {
         .outputOptions([
             '-preset ultrafast',
             '-tune zerolatency',
-            '-b:v 1200k',       // බිට්‍රේට් එක ටිකක් අඩු කළා (සර්වර් බර අඩු වීමට)
-            '-maxrate 1200k',
-            '-bufsize 2400k',
+            '-b:v 1500k',       // බිට්‍රේට් එක (ඔබේ සර්වර් ස්පීඩ් එක අනුව 1000k - 2000k අතර දෙන්න)
+            '-maxrate 1500k',
+            '-bufsize 3000k',
             '-pix_fmt yuv420p',
-            '-g 60'
+            '-g 60',
+            '-r 30'             // ෆ್ರේම් රේට් එක 30 ක් ලෙස ස්ථාවර කිරීම
         ])
         .output(fbRtmpUrl)
-
-        
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned:', commandLine);
+            console.log('FFmpeg spawned for FB Live:', commandLine);
         })
         .on('error', (err) => {
             console.error('Streaming error:', err.message);
@@ -109,8 +110,9 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live stream started from server successfully! 🚀</h2><p>You can close this page now or go back.</p>');
+    res.send('<h2>Facebook Live started from server successfully! 🚀</h2><p>Your .ts stream is now piping to Facebook Live.</p>');
 });
+
 
 let activeViewers = 0;
 io.on('connection', (socket) => {
