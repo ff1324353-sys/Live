@@ -82,12 +82,14 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-        .outputOptions([
-            '-c:v copy',         // වීඩියෝ එක කෝඩ් කරන්නේ නැහැ, තියෙන විදිහටම කොපි කරනවා
-            '-c:a aac',          // ඕඩියෝ එක විතරක් ෆේස්බුක් වලට සපෝට් කරන විදිහට දානවා
+                .outputOptions([
+            '-c:v copy',                         // වීඩියෝ එක ට්‍රාන්ස්කෝඩ් කරන්නේ නැහැ (සර්වර් එක හිර වෙන්නේ නැත)
+            '-c:a aac',                          
             '-b:a 128k',
+            '-af "volume=0.9,highpass=f=200,lowpass=f=3000"', // ශබ්දයේ ෆ්‍රීක්වෙන්සි එක මාරු කර කොපිරයිට් බොට්ස්ලා රවටයි
             '-f flv'
         ])
+            
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
