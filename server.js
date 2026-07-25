@@ -74,27 +74,21 @@ app.post('/start-fb-live', (req, res) => {
     console.log('Starting streaming to Facebook from TS URL:', streamUrl);
 
     // .ts (Transport Stream) වලට අදාලව FFmpeg රීකනෙක්ට් සහ ಇನ್පුට් ඔප්ෂන්ස් ටික මෙන්න
-    const command = ffmpeg(streamUrl)
+        const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts' // .ts ෆයිල් වල ಸಿಂಕ್ ප්‍රශ්න මඟහරවා ගැනීමට
+            '-fflags +discardcorrupt+genpts'
         ])
-        .videoCodec('libx264')
-        .audioCodec('aac')
-        .format('flv')
         .outputOptions([
-            '-preset ultrafast',
-            '-tune zerolatency',
-            '-b:v 1500k',       // බිට්‍රේට් එක (ඔබේ සර්වර් ස්පීඩ් එක අනුව 1000k - 2000k අතර දෙන්න)
-            '-maxrate 1500k',
-            '-bufsize 3000k',
-            '-pix_fmt yuv420p',
-            '-g 60',
-            '-r 30'             // ෆ್ರේම් රේට් එක 30 ක් ලෙස ස්ථාවර කිරීම
+            '-c:v copy',         // වීඩියෝ එක කෝඩ් කරන්නේ නැහැ, තියෙන විදිහටම කොපි කරනවා
+            '-c:a aac',          // ඕඩියෝ එක විතරක් ෆේස්බුක් වලට සපෝට් කරන විදිහට දානවා
+            '-b:a 128k',
+            '-f flv'
         ])
         .output(fbRtmpUrl)
+            
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
         })
