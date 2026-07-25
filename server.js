@@ -72,16 +72,17 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook from TS URL:', streamUrl);
 
-    const command = ffmpeg(streamUrl)
+        const command = ffmpeg(streamUrl, { timeout: 432000 })
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts'
+            '-fflags +discardcorrupt+genpts',
+            '-headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36\r\nReferer: https://www.fancode.com/\r\n"'
         ])
         .outputOptions([
-            '-c:v copy',     // වීඩියෝ එක ඩිරෙක්ට් කොපි කරන නිසා සර්වර් එක හිර වෙන්නේ/ලැග් වෙන්නේ නැත
-            '-c:a aac',      // ඕඩියෝ එක aac කරයි
+            '-c:v copy',     
+            '-c:a aac',      
             '-b:a 128k',
             '-f flv'
         ])
@@ -97,6 +98,7 @@ app.post('/start-fb-live', (req, res) => {
             console.log('Streaming finished.');
             activeStreamProcess = null;
         });
+
 
     command.run();
     activeStreamProcess = command;
