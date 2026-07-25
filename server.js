@@ -55,10 +55,15 @@ app.get('/proxy', async (req, res) => {
 });
 
 // ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    const streamUrl = "http://9937675.j15m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVWlEAAAUPBV5QA10EBwFcAQMIBV0GV1JUAAcGVQMADQAaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAVtcBwlSBxwWQFBTGl9BVQIPBVVcVEcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JRAQwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEVlZVAwACXRFI";
+    // මෙතැනදී ඔයාගේ ලොකල් සර්වර් එකේ ප්‍රොක්සි ලින්ක් එක දෙන්න (ප්‍රෝටෝකෝලය සහ පෝර්ට් එක හරියටම තියෙන්න ඕනේ)
+    const rawStreamUrl = "http://9937675.j15m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVWlEAAAUPBV5QA10EBwFcAQMIBV0GV1JUAAcGVQMADQAaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAVtcBwlSBxwWQFBTGl9BVQIPBVVcVEcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JRAQwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEVlZVAwACXRFI";
+    
+    // ප්‍රොක්සි එක හරහා රූට් කරන ස්ට්‍රීම් ලින්ක් එක
+    const streamUrl = `http://localhost:${PORT}/proxy?url=${encodeURIComponent(rawStreamUrl)}`;
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -70,17 +75,15 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting streaming to Facebook from TS URL:', streamUrl);
+    console.log('Starting streaming to Facebook via Proxy:', streamUrl);
 
-                const command = ffmpeg(streamUrl)
+    const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts',
-            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36\r\nReferer: https://www.fancode.com/\r\n'
+            '-fflags +discardcorrupt+genpts'
         ])
-
         .outputOptions([
             '-c:v copy',     
             '-c:a aac',      
@@ -100,12 +103,12 @@ app.post('/start-fb-live', (req, res) => {
             activeStreamProcess = null;
         });
 
-
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Facebook Live started from server successfully! 🚀</h2><p>Your .ts stream is now piping to Facebook Live.</p>');
+    res.send('<h2>Facebook Live started via Proxy successfully! 🚀</h2>');
 });
+
 
 let activeViewers = 0;
 io.on('connection', (socket) => {
