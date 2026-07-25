@@ -55,6 +55,7 @@ app.get('/proxy', async (req, res) => {
 });
 
 // ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක (HTML Form POST හැන්ඩ්ල් කිරීම)
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක (HTML Form POST හැන්ඩ්ල් කිරීම)
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
@@ -81,28 +82,13 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts'
         ])
-            
-                        .outputOptions([
-            '-c:v libx264',                       // වීඩියෝ එක ලාවට කෝඩ් කරයි (ෆිල්ටර් වැඩ කිරීමට)
-            '-preset ultrafast',                  // සර්වර් CPU බර අඩුම මට්ටමේ තබා ගැනීමට
-            '-tune zerolatency',                  // ලයිව් ස්ට්‍රීම් ඩිලේ එක නැති කිරීමට
-            '-b:v 1500k',                         // බිට්‍රේට් එක
-            '-maxrate 1500k',
-            '-bufsize 3000k',
-            '-pix_fmt yuv420p',
-            '-g 60',
-            '-r 30',
-            '-c:a aac',                           // ඕඩියෝ කෝඩෙක් එක
+        .outputOptions([
+            '-c:v copy',         // වීඩියෝ එක කෝඩ් කරන්නේ නැහැ, තියෙන විදිහටම කොපි කරනවා
+            '-c:a aac',          // ඕඩියෝ එක විතරක් ෆේස්බුක් වලට සපෝට් කරන විදිහට දානවා
             '-b:a 128k',
-            // 🔥 වීඩියෝ සහ ඕඩියෝ දෙකටම දාන ලාවට වෙනස් කරන ෆිල්ටර්ස්:
-            '-vf "scale=1280:720"',               // වීඩියෝ රෙසලුෂන් එක 720p වලට සෙට් කරයි
-            '-af "asetrate=44100*1.015,aresample=44100"', // ඕඩියෝ පිච් එක ලාවට වෙනස් කර කොපිරයිට් වළක්වයි
             '-f flv'
-    
-
         ])
         .output(fbRtmpUrl)
-            
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
         })
@@ -120,6 +106,8 @@ app.post('/start-fb-live', (req, res) => {
 
     res.send('<h2>Facebook Live started from server successfully! 🚀</h2><p>Your .ts stream is now piping to Facebook Live.</p>');
 });
+
+
 
 
 let activeViewers = 0;
