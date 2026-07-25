@@ -1,30 +1,42 @@
 name: FB Live Streamer
 
 on:
-  workflow_dispatch:
-    inputs:
-      stream_key:
-        description: 'Facebook Stream Key'
-        required: true
-        type: string
+  workflow_dispatch: # GitHub ඩෑෂ්බෝඩ් එකෙන් Manual එකෙන් "Run workflow" ක්ලික් කරලා ලයිව් එක පටන් ගන්න
 
 jobs:
-  start-stream:
+  stream:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Install FFmpeg and Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg curl
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Start Live Stream to Facebook
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Start Live Stream
+        env:
+          PORT: 3000
         run: |
-          ffmpeg -decryption_key da58f6323d6388054bd316890f729f72 \
-            -i "https://otte.cache.aiv-cdn.net/iad-nitro/live/clients/dash/enc/jpjzsonseg/out/v1/26eeb47cccd24e2d8e1975655a1f04e9/cenc.mpd" \
-            -c:v libx264 -preset ultrafast -tune zerolatency \
-            -c:a aac -b:a 128k \
-            -f flv \
-            "rtmps://live-api-s.facebook.com:443/rtmp/${{ github.event.inputs.stream_key }}"
+          # සර්වර් එක බැක්ග්‍රවුන්ඩ් එකේ රන් වෙන්න හැදීම
+          node server.js &
+          
+          # සර්වර් එක ස්ටාර්ට් වෙන්න තත්පර 5ක් ඉඳලා ලයිව් රෝස් එකට රික්වෙස්ට් එක යැවීම (අවශ්‍ය නම් ස්ක්‍රිප්ට් එකෙන්ම ඔටෝ පටන් ගන්න හැදීමට)
+          sleep 5
+          
+          # ලයිව් ස්ටාර්ට් රූට් එකට හිස් රික්වෙස්ට් එකක් හෝ ස්ට්‍රීම් කී එක සෙට් කරලා යැවීම
+          # (මෙතැනදී ඔයාගේ ෆේස්බුක් ස්ට්‍රීම් කී එක GitHub Secrets වල දාලා මෙතැනට දෙන්න පුළුවන්)
+          curl -X POST http://localhost:3000/start-fb-live \
+            -H "Content-Type: application/json" \
+            -d '{"streamKey": "${{ secrets.FB_STREAM_KEY }}"}'
+          
+          # ලයිව් එක දිගටම ඩුවන්න කල් දීම (GitHub Actions වල මැක්සිමම් පැය 6ක් දුවන්න පුළුවන්)
+          sleep 21600
