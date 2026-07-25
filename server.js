@@ -58,12 +58,7 @@ app.get('/proxy', async (req, res) => {
 // ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
-    
-    // මෙතැනදී ඔයාගේ ලොකල් සර්වර් එකේ ප්‍රොක්සි ලින්ක් එක දෙන්න (ප්‍රෝටෝකෝලය සහ පෝර්ට් එක හරියටම තියෙන්න ඕනේ)
-    const rawStreamUrl = "http://9937675.j15m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVWlEAAAUPBV5QA10EBwFcAQMIBV0GV1JUAAcGVQMADQAaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAVtcBwlSBxwWQFBTGl9BVQIPBVVcVEcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JRAQwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEVlZVAwACXRFI";
-    
-    // ප්‍රොක්සි එක හරහා රූට් කරන ස්ට්‍රීම් ලින්ක් එක
-    const streamUrl = `http://localhost:${PORT}/proxy?url=${encodeURIComponent(rawStreamUrl)}`;
+        const streamUrl = "http://9937675.j13m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVWQYGUAYHU1JQA1ZQVAUCAgJUB1wHAVQAXQIGBQQDDlQaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAVtcBg9TABwWQFBTGl9BVQQEB1NQXEcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JRAQwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEV1FdAwMTGQ==";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -75,14 +70,15 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting streaming to Facebook via Proxy:', streamUrl);
+    console.log('Starting streaming to Facebook with VLC headers:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts'
+            '-fflags +discardcorrupt+genpts',
+            '-headers', 'User-Agent: VLC/3.0.20 LibVLC/3.0.20\r\nIcy-MetaData: 1\r\nAccept-Encoding: identity\r\n'
         ])
         .outputOptions([
             '-c:v copy',     
@@ -105,6 +101,7 @@ app.post('/start-fb-live', (req, res) => {
 
     command.run();
     activeStreamProcess = command;
+
 
     res.send('<h2>Facebook Live started via Proxy successfully! 🚀</h2>');
 });
