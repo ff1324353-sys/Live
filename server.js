@@ -86,7 +86,8 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
+
             
             // 2. ශබ්දය ස්ථාවරව තබා ගැනීම (Live කට් වීම වළක්වන aresample sync සමඟින්)
              '-c:a', 'copy',
