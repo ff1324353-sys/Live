@@ -61,7 +61,7 @@ app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
     // ඔයා දුන් අලුත්ම ලින්ක් එක
-    const streamUrl = "http://9937675.c29s.cc/live/fouaadkhadi/E7JWd8N9/150222.ts?token=ShoJV0NcEgMVWV1QUlMEAwdRUlxTA1RTUFABXw4AAwdVXQABUwcFAA8aSUEXREVVBwg6DFUXC1UGBQJUChlAEEJdE2lZUBIDFQFcUFMGAAVESUcRWFhURgkEB14NBVdTBgBUGhJEWV0VAkdRVAQPAlBQR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUFBcBhcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJVUFxXAhdM";
+    const streamUrl = "http://9937675.j15m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVWVcBAgVVBAcDBwcJVwBTUgZVU1wFUFcBW1cPAFFTCg4aSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAFJSBwhUDxwWQFBTGl9BVQAOA1NQVUcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JWBgwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEVlZVAwACXRFI";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -88,18 +88,7 @@ app.post('/start-fb-live', (req, res) => {
                 .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
-            
-            // 2. ලයිව් කට් වීම වළක්වන ස්ථාවර ශබ්ද වෙනස් කිරීමේ ෆිල්ටර් (Audio Sync ද සමඟින්)
-            '-af', 'asetrate=44100*1.03,aresample=44100:async=1',
-
-            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-tune', 'zerolatency',
-            '-b:v', '1500k',
-            '-maxrate', '1500k',
-            '-bufsize', '3000k',
-            '-pix_fmt', 'yuv420p',
+  x_fmt', 'yuv420p',
             '-g', '30',
             '-c:a', 'aac',
             '-b:a', '128k',
