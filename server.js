@@ -57,6 +57,7 @@ app.get('/proxy', async (req, res) => {
 });
 
 // ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
@@ -71,9 +72,10 @@ app.post('/start-fb-live', (req, res) => {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
+    // RTMPS වෙනුවට ස්ථාවර RTMP ලින්ක් එක භාවිත කිරීම (Exit code 183 වළක්වයි)
+    const fbRtmpUrl = `rtmp://live-api-s.facebook.com:80/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Original Audio & Large Box:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Stable RTMP:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,13 +87,13 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=380, h=85 ලෙස විශාල කළු පෙට්ටියකින් ලෝගෝ එක සම්පූර්ණයෙන්ම වැසීම
+            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කිසිදු වෙනසක් නොකර (Original ඩිරෙක්ට් කොපි කිරීම)
+            // 2. ශබ්දය ඔරිජිනල් විදිහටම ඩිරෙක්ට් කොපි කිරීම
             '-c:a', 'copy',
 
-            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
+            // 3. ස්ථාවර කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -119,8 +121,9 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Original Audio & Large Cover successfully! 🚀</h2>');
+    res.send('<h2>Live started successfully with Stable RTMP! 🚀</h2>');
 });
+
 
 // ලයිව් එක නතර කරන්න රූට් එක
 app.get('/stop-live', (req, res) => {
