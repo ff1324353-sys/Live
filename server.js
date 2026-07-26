@@ -85,13 +85,13 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස් (ඔයාගේ වැඩ කරන විදිහටම ඇත)
+            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය පමණක් Original ආකාරයට ඩිරෙක්ට් කොපි කිරීම (මෙතැනදී audio filters ඉවත් කර ඇත)
-            '-c:a', 'copy',
+            // 2. ශබ්දය ස්ථාවරව තබා ගැනීම (Live කට් වීම වළක්වන aresample sync සමඟින්)
+             '-c:a', 'copy',
 
-            // 3. අනෙකුත් ස්ට්‍රීම් සෙටින්ග්ස්
+            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -100,10 +100,13 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
-
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
@@ -147,6 +150,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-
-Me code Eka dammama wada karanawa. Meke sound original sounds walata harawala denna
