@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Color Adjustment:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Original Audio:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,15 +85,14 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්:
-            // - eq=saturation=1.1:brightness=0.02 (වර්ණ සහ බ්‍රයිට්නස් මඳක් වෙනස් කිරීමෙන් AI හැෂ් වෙනස් කරයි)
-            // - drawbox සහ drawtext මඟින් දකුණු උඩ ලෝගෝ එක වසා ZANTA පෙන්වයි
-            '-vf', 'eq=saturation=1.1:brightness=0.02,drawbox=x=1050:y=10:w=220:h=60:color=black@0.9:t=fill,drawtext=text=ZANTA:fontcolor=white:fontsize=24:x=1120:y=25',
+            // 'iw-w-20' මඟින් වීඩියෝ එකේ රෙසලියුෂන් එක කුමක් වුවත් හරියටම දකුණු මුල්ලෙන් ලෝගෝ එක වසයි
+            // hflip ඉවත් කර ඇති බැවින් ලෝගෝ එක දකුණු පැත්තේම පවතිනු ඇත
+            '-vf', "eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=20:w=220:h=60:color=black@0.9:t=fill,drawtext=text='ZANTA':fontcolor=white:fontsize=24:x=iw-w+60:y=35",
             
-            // 2. ඕඩියෝ පිච් එක මඳක් වෙනස් කර කොපිරাইট අල්ලාගැනීම වැළැක්වීම
-            '-af', 'asetrate=44100*1.015,aresample=44100',
+            // ශබ්දය ඔරිජිනල් විදිහටම
+            '-c:a', 'copy',
 
-            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
+            // කෝඩින්ග් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -102,12 +101,10 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
+
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
@@ -124,7 +121,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Facebook Live started successfully! 🚀</h2>');
+    res.send('<h2>Live started with Original Audio successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
