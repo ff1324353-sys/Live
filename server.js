@@ -84,14 +84,15 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-                        .outputOptions([
-            // පෙට්ටියේ පළල w=320 දක්වා වැඩි කර තවත් වම් පැත්තට දික් කිරීමෙන් සම්පූර්ණ ලෝගෝ එකම වැසීම
+                        
+        .outputOptions([
+            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ පළල w=320 වූ කළු පෙට්ටියකින් දකුණු උඩ ලෝගෝ එක සම්පූර්ණයෙන්ම වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
             
-            // ශබ්දය ඔරිජිනල් විදිහටම ඩිරෙක්ට් කොපි කිරීම
-            '-c:a', 'copy',
+            // 2. වේගය වෙනස් නොකර කටහඬේ ස්වරය (Pitch) පමණක් මඳක් වෙනස් කිරීම
+            '-af', 'asetrate=44100*1.04,aresample=44100',
 
-            // කෝඩින්ග් සෙටින්ග්ස්
+            // 3. කෝඩින්ග් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -100,6 +101,9 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
