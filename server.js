@@ -75,7 +75,7 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook directly:', streamUrl);
 
-    const command = ffmpeg(streamUrl)
+        const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
@@ -85,6 +85,9 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
+            // දකුණු පැත්තේ උඩ තියෙන ලෝගෝ එක වැසීමට (x=1050 සහ y=10 මඟින් දකුණු මුල්ල පාලනය කරයි)
+            '-vf', 'drawbox=x=1050:y=10:w=220:h=60:color=black@0.9:t=fill,drawtext=text=\'ZANTA LIVE\':fontcolor=white:fontsize=22:x=1070:y=25',
+            
             '-c:v libx264',
             '-preset ultrafast',
             '-tune zerolatency',
@@ -92,13 +95,14 @@ app.post('/start-fb-live', (req, res) => {
             '-maxrate 1500k',
             '-bufsize 3000k',
             '-pix_fmt yuv420p',
-            '-g 30',                // තත්පර 1කට වතාවක් keyframe යවා Facebook කනෙක්ෂන් කට් වීම වළකී
+            '-g 30',
             '-c:a aac',
             '-b:a 128k',
             '-ar 44100',
             '-max_muxing_queue_size 9999',
             '-f flv'
         ])
+
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
