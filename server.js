@@ -84,12 +84,11 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-        .outputOptions([
-            // 'iw-w-20' මඟින් වීඩියෝ එකේ රෙසලියුෂන් එක කුමක් වුවත් හරියටම දකුණු මුල්ලෙන් ලෝගෝ එක වසයි
-            // hflip ඉවත් කර ඇති බැවින් ලෝගෝ එක දකුණු පැත්තේම පවතිනු ඇත
-            '-vf', "eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=20:w=220:h=60:color=black@0.9:t=fill,drawtext=text='ZANTA':fontcolor=white:fontsize=24:x=iw-w+60:y=35",
+                .outputOptions([
+            // දකුණු පැත්තේ උඩ ලෝගෝ එක වැසීමට පිරිසිදු කළු පෙට්ටියක් (Drawbox) පමණක් භාවිත කිරීම (Font errors මඟහරවා ඇත)
+            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=20:w=220:h=60:color=black@0.9:t=fill',
             
-            // ශබ්දය ඔරිජිනල් විදිහටම
+            // ශබ්දය ඔරිජිනල් විදිහටම ඩිරෙක්ට් කොපි කිරීම
             '-c:a', 'copy',
 
             // කෝඩින්ග් සෙටින්ග්ස්
@@ -104,6 +103,8 @@ app.post('/start-fb-live', (req, res) => {
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
+
+        
 
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
