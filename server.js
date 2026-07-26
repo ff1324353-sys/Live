@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Original Audio & Large Box:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,11 +85,11 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=380, h=85 ලෙස විශාල කළු පෙට්ටියකින් ලෝගෝ එක සම්පූර්ණයෙන්ම වැසීම
+            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය ස්ථාවරව තබා ගැනීම (Live කට් වීම වළක්වන aresample sync සමඟින්)
-            '-af', 'asetrate=44100*1.03,aresample=44100:async=1',
+            // 2. ශබ්දය කිසිදු වෙනසක් නොකර (Original ඩිරෙක්ට් කොපි කිරීම)
+            '-c:a', 'copy',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
@@ -100,10 +100,6 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
@@ -123,7 +119,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully! 🚀</h2>');
+    res.send('<h2>Live started with Original Audio & Large Cover successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
