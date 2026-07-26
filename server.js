@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright streaming to Facebook:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Color Adjustment:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,13 +85,12 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: 
-            // - crop=1220:680:30:20 (දාර ටිකක් කපා හැරීමෙන් AI හැෂ් වෙනස් කරයි)
-            // - eq=saturation=1.08:brightness=0.01 (වර්ණ ස්වල්පයක් වෙනස් කරයි)
-            // - drawbox හා drawtext මඟින් දකුණු උඩ ලෝගෝ එක වසා ZANTA LIVE පෙන්වයි
-            '-vf', 'crop=1220:680:30:20,eq=saturation=1.08:brightness=0.01,drawbox=x=1010:y=10:w=220:h=60:color=black@0.9:t=fill,drawtext=text=ZANTA_LIVE:fontcolor=white:fontsize=22:x=1030:y=25',
+            // 1. වීඩියෝ ෆිල්ටර්ස්:
+            // - eq=saturation=1.1:brightness=0.02 (වර්ණ සහ බ්‍රයිට්නස් මඳක් වෙනස් කිරීමෙන් AI හැෂ් වෙනස් කරයි)
+            // - drawbox සහ drawtext මඟින් දකුණු උඩ ලෝගෝ එක වසා ZANTA පෙන්වයි
+            '-vf', 'eq=saturation=1.1:brightness=0.02,drawbox=x=1050:y=10:w=220:h=60:color=black@0.9:t=fill,drawtext=text=ZANTA:fontcolor=white:fontsize=24:x=1120:y=25',
             
-            // 2. ඕඩියෝ ෆිල්ටර්: කමෙන්ට්‍රි හෝ මියුසික් පිච් එක ඉතා මඳක් වෙනස් කර කොපිරাইট බොට් මඟහරියි
+            // 2. ඕඩියෝ පිච් එක මඳක් වෙනස් කර කොපිරাইট අල්ලාගැනීම වැළැක්වීම
             '-af', 'asetrate=44100*1.015,aresample=44100',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
@@ -111,7 +110,7 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned for Anti-Copyright FB Live:', commandLine);
+            console.log('FFmpeg spawned:', commandLine);
         })
         .on('error', (err) => {
             console.error('Streaming error:', err.message);
@@ -125,11 +124,11 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Anti-Copyright Facebook Live started successfully! 🚀</h2>');
+    res.send('<h2>Facebook Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
-app.get('/stop-live', (logReq, res) => {
+app.get('/stop-live', (req, res) => {
     if (activeStreamProcess) {
         activeStreamProcess.kill('SIGKILL');
         activeStreamProcess = null;
