@@ -78,33 +78,24 @@ app.post('/start-fb-live', (req, res) => {
 
     console.log('Starting streaming to Facebook via Proxy:', streamUrl);
 
-                    const command = ffmpeg(streamUrl)
+    const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 50M',       // වැඩිපුර ඩේටා ප්‍රමාණයක් මුලින් ප්‍රෝබ් කර බෆර් කරගැනීම
-            '-analyzeduration 20M'  // ස්ට්‍රීම් එකේ ස්ථාවරභාවය තහවුරු කරගැනීමට කාලය ලබාදීම
+            '-avioflags direct',
+            '-probesize 50M',
+            '-analyzeduration 20M'
         ])
         .outputOptions([
-            '-c:v libx264',
-            '-preset ultrafast',
-            '-tune zerolatency',
-            '-b:v 1500k',
-            '-maxrate 1500k',
-            '-bufsize 3000k',
-            '-pix_fmt yuv420p',
-            '-g 30',
-            '-c:a aac',
+            '-c:v copy',             // වීඩියෝ එක Re-encode නොකර ඩිරෙක්ට් කොපි කරන නිසා Render සර්වර් එක ලැග් වෙන්නේ නැත
+            '-c:a aac',              // ඕඩියෝ එක පමණක් aac වෙත හැරවීම
             '-b:a 128k',
             '-ar 44100',
-            '-max_muxing_queue_size 9999',
+            '-max_muxing_queue_size 9999', // බෆර් පිරී යාමෙන් කට් වීම වළකී
             '-f flv'
         ])
-
-
-
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned for FB Live:', commandLine);
@@ -122,6 +113,17 @@ app.post('/start-fb-live', (req, res) => {
     activeStreamProcess = command;
 
     res.send('<h2>Facebook Live started via Proxy successfully! 🚀</h2>');
+});
+
+// ලයිව් එක නතර කරන්න රූට් එක
+app.get('/stop-live', (req, res) => {
+    if (activeStreamProcess) {
+        activeStreamProcess.kill('SIGKILL');
+        activeStreamProcess = null;
+        res.send('<h2>Live stream stopped successfully.</h2>');
+    } else {
+        res.status(400).send('No active stream running.');
+    }
 });
 
 let activeViewers = 0;
