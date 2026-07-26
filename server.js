@@ -84,9 +84,9 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-                .outputOptions([
-            // දකුණු පැත්තේ උඩ ලෝගෝ එක වැසීමට පිරිසිදු කළු පෙට්ටියක් (Drawbox) පමණක් භාවිත කිරීම (Font errors මඟහරවා ඇත)
-            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=20:w=220:h=60:color=black@0.9:t=fill',
+                        .outputOptions([
+            // පෙට්ටියේ පළල w=320 දක්වා වැඩි කර තවත් වම් පැත්තට දික් කිරීමෙන් සම්පූර්ණ ලෝගෝ එකම වැසීම
+            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
             
             // ශබ්දය ඔරිජිනල් විදිහටම ඩිරෙක්ට් කොපි කිරීම
             '-c:a', 'copy',
@@ -103,6 +103,7 @@ app.post('/start-fb-live', (req, res) => {
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
+
 
         
 
