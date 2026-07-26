@@ -17,7 +17,7 @@ app.use(express.json());
 
 let activeStreamProcess = null;
 
-// ප්‍රොක්සි රූට් එක
+// ප්‍රොක්සි රූට් එක (අවශ්‍ය නම් වෙනත් අවස්ථාවකට පාවිච්චි කළ හැක)
 app.get('/proxy', async (req, res) => {
     let targetUrl = req.query.url;
     if (!targetUrl) return res.status(400).send('Missing url');
@@ -60,11 +60,8 @@ app.get('/proxy', async (req, res) => {
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    // ඔයා දුන් අලුත්ම ලින්ක් එක
-    const rawStreamUrl = "http://9937675.c29s.cc/live/fouaadkhadi/E7JWd8N9/150222.ts?token=ShoJV0NcEgMVWV1QUlMEAwdRUlxTA1RTUFABXw4AAwdVXQABUwcFAA8aSUEXREVVBwg6DFUXC1UGBQJUChlAEEJdE2lZUBIDFQFcUFMGAAVESUcRWFhURgkEB14NBVdTBgBUGhJEWV0VAkdRVAQPAlBQR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUFBcBhcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJVUFxXAhdM";
-    
-    // ප්‍රොක්සි එක හරහා රූට් කිරීම
-    const streamUrl = `http://localhost:${PORT}/proxy?url=${encodeURIComponent(rawStreamUrl)}`;
+    // ඔයා දුන් අලුත්ම ලින්ක් එක (ප්‍රොක්සි හරහා නොව කෙලින්ම ලබා දී ඇත)
+    const streamUrl = "http://9937675.c29s.cc/live/fouaadkhadi/E7JWd8N9/150222.ts?token=ShoJV0NcEgMVWV1QUlMEAwdRUlxTA1RTUFABXw4AAwdVXQABUwcFAA8aSUEXREVVBwg6DFUXC1UGBQJUChlAEEJdE2lZUBIDFQFcUFMGAAVESUcRWFhURgkEB14NBVdTBgBUGhJEWV0VAkdRVAQPAlBQR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUFBcBhcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJVUFxXAhdM";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -76,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting streaming to Facebook via Proxy:', streamUrl);
+    console.log('Starting streaming to Facebook directly:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -84,16 +81,22 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-avioflags direct',
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            '-c:v copy',             // වීඩියෝ එක Re-encode නොකර ඩිරෙක්ට් කොපි කරන නිසා Render සර්වර් එක ලැග් වෙන්නේ නැත
-            '-c:a aac',              // ඕඩියෝ එක පමණක් aac වෙත හැරවීම
+            '-c:v libx264',
+            '-preset ultrafast',
+            '-tune zerolatency',
+            '-b:v 1500k',
+            '-maxrate 1500k',
+            '-bufsize 3000k',
+            '-pix_fmt yuv420p',
+            '-g 30',                // තත්පර 1කට වතාවක් keyframe යවා Facebook කනෙක්ෂන් කට් වීම වළකී
+            '-c:a aac',
             '-b:a 128k',
             '-ar 44100',
-            '-max_muxing_queue_size 9999', // බෆර් පිරී යාමෙන් කට් වීම වළකී
+            '-max_muxing_queue_size 9999',
             '-f flv'
         ])
         .output(fbRtmpUrl)
@@ -112,7 +115,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Facebook Live started via Proxy successfully! 🚀</h2>');
+    res.send('<h2>Facebook Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
