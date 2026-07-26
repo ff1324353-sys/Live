@@ -85,14 +85,14 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
                         
-        .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ පළල w=320 වූ කළු පෙට්ටියකින් දකුණු උඩ ලෝගෝ එක සම්පූර්ණයෙන්ම වැසීම
+                .outputOptions([
+            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
             
-            // 2. වේගය වෙනස් නොකර කටහඬේ ස්වරය (Pitch) පමණක් මඳක් වෙනස් කිරීම
-            '-af', 'asetrate=44100*1.04,aresample=44100',
+            // 2. ලයිව් කට් වීම වළක්වන ස්ථාවර ශබ්ද වෙනස් කිරීමේ ෆිල්ටර් (Audio Sync ද සමඟින්)
+            '-af', 'asetrate=44100*1.03,aresample=44100:async=1',
 
-            // 3. කෝඩින්ග් සෙටින්ග්ස්
+            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -104,11 +104,10 @@ app.post('/start-fb-live', (req, res) => {
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
-
-
         
 
         .output(fbRtmpUrl)
