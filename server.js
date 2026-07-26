@@ -57,6 +57,7 @@ app.get('/proxy', async (req, res) => {
 });
 
 // ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
@@ -71,10 +72,10 @@ app.post('/start-fb-live', (req, res) => {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    // ස්ථාවර Facebook RTMP URL එක
-    const fbRtmpUrl = `rtmp://live-api-s.facebook.com/rtmp/${streamKey}`;
+    // RTMPS (Port 443) මඟින් කනෙක්ට් වීම
+    const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Original Audio & Large Box:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with RTMPS Port 443:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -86,7 +87,7 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක සම්පූර්ණයෙන්ම වැසීම
+            // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
             
             // 2. ශබ්දය ඔරිජිනල් විදිහටම ඩිරෙක්ට් කොපි කිරීම
@@ -120,7 +121,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully! 🚀</h2>');
+    res.send('<h2>Live started successfully with RTMPS Port 443! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
