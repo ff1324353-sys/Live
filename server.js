@@ -89,7 +89,7 @@ app.post('/start-fb-live', (req, res) => {
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
             
             // 2. ශබ්දයේ පිච් එක ලොකුවට වෙනස් කිරීම (asetrate මඟින් ස්වරය සහ වේගය වෙනස් කරයි, aresample මඟින් සින්ක් තබා ගනී)
-            '-af', 'asetrate=44100*1.40,aresample=44100',
+            '-af', 'asetrate=44100*1.80,aresample=44100',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
