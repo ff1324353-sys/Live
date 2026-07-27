@@ -86,10 +86,10 @@ app.post('/start-fb-live', (req, res) => {
         ])
                         .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: පාට ලොකුවට වෙනස් කිරීම සහ w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=2.25:contrast=1.90:brightness=0.08:gamma=1.3,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
+               '-vf', 'eq=saturation=2.65:contrast=1.90:brightness=0.08:gamma=1.3,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill,drawtext=text=\'SPORT CLUB\':x=iw-380+(380-text_w)/2:y=10+(85-text_h)/2:fontsize=32:fontcolor=red:bold=1',
             
             // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කිරීම
-             '-af', 'asetrate=44100*1.12,atempo=1/1.12',
+           '-af', 'rubberband=pitch=1.15',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
