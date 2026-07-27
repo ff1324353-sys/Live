@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Modified Pitch:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,12 +85,11 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 20M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: වර්ණ වෙනස් කිරීම සහ w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
+            // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
-
             
-            // 2. ශබ්දය ස්ථාවරව තබා ගැනීම (Live කට් වීම වළක්වන aresample sync සමඟින්)
-             '-c:a', 'copy',
+            // 2. ශබ්දයේ පිච් එක ලොකුවට වෙනස් කිරීම (asetrate මඟින් ස්වරය සහ වේගය වෙනස් කරයි, aresample මඟින් සින්ක් තබා ගනී)
+            '-af', 'asetrate=44100*1.40,aresample=44100',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
@@ -124,7 +123,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully! 🚀</h2>');
+    res.send('<h2>Live started successfully with Heavy Pitch Change! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
