@@ -84,12 +84,12 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-        .outputOptions([
+                .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
             
-            // 2. ශබ්දයේ පිච් එක ලොකුවට වෙනස් කිරීම (asetrate මඟින් ස්වරය සහ වේගය වෙනස් කරයි, aresample මඟින් සින්ක් තබා ගනී)
-            '-af', 'asetrate=44100*1.80,aresample=44100',
+            // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කරන ෆිල්ටර් එක
+            '-af', 'rubberband=pitch=1.15',
 
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
@@ -107,6 +107,7 @@ app.post('/start-fb-live', (req, res) => {
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
+
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
