@@ -90,7 +90,7 @@ app.post('/start-fb-live', (req, res) => {
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
             // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කරන ෆිල්ටර් එක
-    '-c:a', 'copy',
+     '-af', 'rubberband=pitch=1.25',
             // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
