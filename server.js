@@ -88,10 +88,10 @@ app.post('/start-fb-live', (req, res) => {
             // 1. වීඩියෝ ෆිල්ටර්ස්: පාට වෙනස් කිරීම සහ ලෝගෝ එක වැසීමට කළු පෙට්ටිය
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය සම්පූර්ණයෙන්ම ඉවත් කිරීම (කොපිරයිට්වලින් 100% ක් බේරීමට)
-            '-an',
+               // 2. ශබ්දයේ පිච් (Pitch) එක වෙනස් කිරීම
+            '-af', 'rubberband=pitch=1.02',
 
-            // 3. වීඩියෝ කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -100,6 +100,10 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
