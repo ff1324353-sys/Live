@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Modified Pitch:', streamUrl);
+    console.log('Starting Anti-Copyright Stream (Muted):', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -84,14 +84,14 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-
-                .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
+        .outputOptions([
+            // 1. වීඩියෝ ෆිල්ටර්ස්: පාට වෙනස් කිරීම සහ ලෝගෝ එක වැසීමට කළු පෙට්ටිය
             '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
-            // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කරන ෆිල්ටර් එක
-        '-an',
-            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
+            // 2. ශබ්දය සම්පූර්ණයෙන්ම ඉවත් කිරීම (කොපිරයිට්වලින් 100% ක් බේරීමට)
+            '-an',
+
+            // 3. වීඩියෝ කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -100,15 +100,9 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
-        
-
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
@@ -125,7 +119,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully with Heavy Pitch Change! 🚀</h2>');
+    res.send('<h2>Live started successfully (Muted & Protected)! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -152,4 +146,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-                
