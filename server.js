@@ -61,7 +61,7 @@ app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
     // ඔයා දුන් අලුත්ම ලින්ක් එක
-    const streamUrl = "http://9937675.s05s.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVDgFWUwBRUwVWAFMCBghcAVBTUw9WUl0FD1BQAldWDQEaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAFBRBwhQARwWQFBTGl9BVgUCAVVTUEcdF1QcR1BCCFlZPQFUTghVVRYKV0JUCU9GX1lvAgAIBF9RE14RBRJKGlwRFRMCD0NcWBwbVVEREQVEUhJcR1JRAQwTSBFWXxNWQRAcEwJDensWHBtSQBEGCkNeXwhHX0dFRhNIEVxDOUpQERFDXQBbVUYSAxUIR09GXVZIOQYKC19QUhBaWl4VGg9AVBMUQ1tfWllNWEo6Ew1UFQpEV1NcAgYGXRFI";
+    const streamUrl = "http://9937675.c24s.cc/live/fouaadkhadi/E7JWd8N9/31670.ts?token=ShoJV0NcEgMVWVwAUlEDVlEDXQMBAlNSUABTAl0BUFYDWQMGBwBVCgIaSUEXREVVBwg6DFUXC1cCAwdWFBcXFlRKPl9UFgobDgFWVFIHAhJKRxEMXFATXgICCFMJAlJVAgpNFEBdVBsNGlRSVAUBAV9HSUdUTUUBQVtRCmdRBxNYWwQUClpFVVsURwwKb1NVCwQLARMPE1QRGRIPS0VAX19NDVocFlJQQ0oEFwESDRJSVVJRExkTB1xAXhJKTEBfE3QqFBwWVUFDXQsQDV9ZElxHERYTGRMNQGpCA0tBEABQVQREEg4SCRUURw4FSGhTCQsLAFJBWAtdRhJcGgRASRNVDlhZQF9LaEgMB0YKFQZSV11UBhdM";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Original Sound:', streamUrl);
+    console.log('Starting Anti-Copyright Stream with Modified Pitch:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -84,14 +84,15 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 50M',
             '-analyzeduration 20M'
         ])
-        .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්ස්: w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=420:h=100:color=black@0.9:t=fill',
-            
-            // 2. ශබ්දය පමණක් Original ආකාරයට ඩිරෙක්ට් කොපි කිරීම
-            '-c:a', 'copy',
 
-            // 3. අනෙකුත් ස්ට්‍රීම් සෙටින්ග්ස්
+                .outputOptions([
+            // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
+            '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=380:h=85:color=black@0.9:t=fill',
+            
+            // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කරන ෆිල්ටර් එක
+            '-af', 'rubberband=pitch=1.15',
+
+            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -100,9 +101,15 @@ app.post('/start-fb-live', (req, res) => {
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
+        
+
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
@@ -119,7 +126,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully with Original Sound! 🚀</h2>');
+    res.send('<h2>Live started successfully with Heavy Pitch Change! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -146,4 +153,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-            
+                
