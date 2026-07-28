@@ -87,7 +87,7 @@ app.post('/start-fb-live', (req, res) => {
 
                 .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: w=380, h=85 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=420:h=100:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.12:brightness=0.05,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
             // 2. වීඩියෝ වේගය වෙනස් නොකර, ශබ්දයේ පිච් (Pitch) එක පමණක් වෙනස් කරන ෆිල්ටර් එක
     '-c:a', 'copy',
