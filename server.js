@@ -86,7 +86,7 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්ස්: w=320 කළු පෙට්ටියෙන් ලෝගෝ එක වැසීම
-            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=320:h=70:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.12:brightness=0.02,drawbox=x=iw-w-20:y=15:w=420:h=100:color=black@0.9:t=fill',
             
             // 2. ශබ්දය පමණක් Original ආකාරයට ඩිරෙක්ට් කොපි කිරීම
             '-c:a', 'copy',
