@@ -86,7 +86,7 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර් (සැහැල්ලු පාට සහ ලෝගෝ වැසීම)
-            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=320:h=120:color=black@0.9:t=fill',
             
             // 2. ශබ්දයේ පිච් එක සහ ඕඩියෝ/වීඩියෝ එකටම සින්ක් කිරීම (Audio-Video Sync)
             '-af', 'rubberband=pitch=1.02,aresample=async=1',
