@@ -89,8 +89,7 @@ app.post('/start-fb-live', (req, res) => {
             '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=320:h=120:color=black@0.9:t=fill',
             
             // 2. ශබ්දයේ පිච් එක සහ ඕඩියෝ/වීඩියෝ එකටම සින්ක් කිරීම (Audio-Video Sync)
-            '-af', 'rubberband=pitch=1.02,aresample=async=1',
-
+              '-c:a', 'copy',
             // 3. ස්ට්‍රීම් කෝඩින්ග් සහ A/V Sync තහවුරු කරන සෙටින්ග්ස්
              '-c:v', 'libx264',
             '-preset', 'ultrafast',
