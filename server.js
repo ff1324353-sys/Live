@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Clean Original Stream with Black Box Only:', streamUrl);
+    console.log('Starting Anti-Copyright Audio-Modified Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,13 +85,13 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS සහ උඩ අයිනේ කළු පාට බොක්ස් එක විතරයි (පාට වෙනස් කරන්නේ නැත)
-            '-vf', 'fps=30,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS, ශබ්දයට/බොට් රැවටීමට සැහැල්ලු Noise සහ කළු බොක්ස් එක
+            '-vf', 'fps=30,eq=saturation=1.05:brightness=0.01,noise=alls=5:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය ඉස්සරහට පැනීම (Drift) වැළැක්වීමට නියමිත A/V Sync සෙටින්ග්ස් සමඟ ඔරිජිනල් ශබ්දය
-            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+            // 2. ශබ්දයේ පිච් එක වෙනස් කිරීම (කොපිරයිට් වැළැක්වීමට) සහ එය වීඩියෝව සමඟම 100% Sync කිරීම
+            '-af', 'rubberband=pitch=1.04,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස් (බිට්රේට් එක 700k)
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -105,7 +105,7 @@ app.post('/start-fb-live', (req, res) => {
             '-b:a', '96k',
             '-ar', '44100',
             '-ac', '2',
-            '-max_muxing_queue_size', '9999',
+            '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
         .output(fbRtmpUrl)
@@ -124,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Original Quality & Black Box! 🚀</h2>');
+    res.send('<h2>Live started with Modified & Synced Audio! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -151,3 +151,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+         
