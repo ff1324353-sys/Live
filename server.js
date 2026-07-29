@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Stable FPS Stream:', streamUrl);
+    console.log('Starting Synced Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,24 +85,23 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර් එක (සැහැල්ලු පාට සහ ලෝගෝ වැසීම)
-            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=340:h=180:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර් (සැහැල්ලු පාට සහ ලෝගෝ වැසීම)
+            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
-            // 2. ශබ්දයේ පිච් එක සැහැල්ලුවෙන් වෙනස් කිරීම
-            '-af', 'rubberband=pitch=1.02',
+            // 2. ශබ්දයේ පිච් එක සහ ඕඩියෝ/වීඩියෝ එකටම සින්ක් කිරීම (Audio-Video Sync)
+            '-af', 'rubberband=pitch=1.02,aresample=async=1',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර 30 FPS ලබාදෙන සෙටින්ග්ස්
-            '-c:v', 'libx264',
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ A/V Sync තහවුරු කරන සෙටින්ග්ස්
+             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-r', '30',             // ෆේස්බුක් එක ඉල්ලන ස්ථාවර 30 FPS ලබාදීම
-            '-g', '60',             // Keyframe interval එක තත්පර 2කට (30 * 2) සැකසීම
-            '-b:v', '700k',         // සර්වර් බර අඩුවීමට බිට්රේට් එක 700k කිරීම
-            '-maxrate', '700k',
-            '-bufsize', '1400k',
+            '-b:v', '1500k',
+            '-maxrate', '1500k',
+            '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
+            '-g', '30',
             '-c:a', 'aac',
-            '-b:a', '96k',
+            '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             '-max_muxing_queue_size', '9999',
@@ -124,7 +123,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Stable FPS Fix! 🚀</h2>');
+    res.send('<h2>Live started with Audio-Video Sync Fix! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
