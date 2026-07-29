@@ -28,7 +28,7 @@ app.get('/proxy', async (req, res) => {
                 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
                 'Icy-MetaData': '1',
                 'Accept-Encoding': 'identity',
-                'Referer': 'https://www.fancode.com/'
+                'Referer': 'https://www.itcnbd.live/'
             }
         });
         response.headers.forEach((v, n) => res.setHeader(n, v));
@@ -60,8 +60,8 @@ app.get('/proxy', async (req, res) => {
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    // ඔයා දුන් ලින්ක් එක
-    const streamUrl = "http://9937675.j13m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVDABSXFIDVABXA1cAVAgFBAwAAgADWwZUXlcDBQUHDwEaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAFBRCABVDxwWQFBTGl9BXQMEA1NXR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUlFUARcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJUUV1XBxdM";
+    // ඔයා දුන් අලුත්ම .m3u8 ලින්ක් එක
+    const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Stream with Audio Pitch:', streamUrl);
+    console.log('Starting M3U8 Stream with Top-Crop & Anti-Copyright Shield:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,19 +85,19 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: ලකුණු පේන විදිහට පාට සහ ෂාප්නෙස් වෙනස් කර ලෝගෝ වැසීම
-            '-vf', 'eq=saturation=1.2:contrast=1.1:brightness=0.03,unsharp=3:3:0.6:3:3:0.0,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: උඩින් විතරක් h=200ක් කපා හැරීම, පාට සහ ෂාප්නෙස් වැඩි කර AI එක රැවටීම
+            '-vf', 'crop=in_w:in_h-200:0:200,eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය තියෙන ගමන්, කොපිරයිට් අල්ලන්න බැරි වෙන්න පිච් (Pitch) එක වෙනස් කිරීම
-            '-af', 'rubberband=pitch=1.13',
+            // 2. ශබ්දය තියෙන ගමන් කොපිරයිට් අල්ලන්න බැරි වෙන්න පිච් (Pitch) එක වෙනස් කිරීම
+            '-af', 'rubberband=pitch=1.04',
 
-            // 3. සර්වර් එකට ලෝඩ් එක අඩු වෙන්න සහ ඩොන්ට්-ක්‍රෑෂ් වෙන්න ලයිට් සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-b:v', '1000k',
-            '-maxrate', '1000k',
-            '-bufsize', '2000k',
+            '-b:v', '900k',
+            '-maxrate', '900k',
+            '-bufsize', '1800k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
             '-c:a', 'aac',
@@ -123,7 +123,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully with Audio & Anti-Copyright Protection! 🚀</h2>');
+    res.send('<h2>Live started successfully with T-Sports M3U8 Link! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
