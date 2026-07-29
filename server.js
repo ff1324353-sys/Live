@@ -60,7 +60,7 @@ app.get('/proxy', async (req, res) => {
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
-    // ඔයා දුන් අලුත්ම .m3u8 ලින්ක් එක
+    // ඔයා දුන් .m3u8 ලින්ක් එක
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
 
     if (!streamKey) {
@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting M3U8 Stream with Top-Crop & Anti-Copyright Shield:', streamUrl);
+    console.log('Starting Full-Screen M3U8 Stream with Anti-Copyright Shield:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,8 +85,8 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: උඩින් විතරක් h=200ක් කපා හැරීම, පාට සහ ෂාප්නෙස් වැඩි කර AI එක රැවටීම
-            '-vf', 'crop=in_w:in_h-200:0:200,eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: නොකපා (Full Screen) පාට සහ ෂාප්නෙස් වැඩි කර AI එක රැවටීම
+            '-vf', 'eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
             // 2. ශබ්දය තියෙන ගමන් කොපිරයිට් අල්ලන්න බැරි වෙන්න පිච් (Pitch) එක වෙනස් කිරීම
             '-af', 'rubberband=pitch=1.04',
@@ -123,7 +123,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully with T-Sports M3U8 Link! 🚀</h2>');
+    res.send('<h2>Live started successfully in Full Screen with T-Sports Link! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
