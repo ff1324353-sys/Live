@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Fixed-FPS M3U8 Stream:', streamUrl);
+    console.log('Starting Clean Original Stream with Black Box Only:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,11 +85,11 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: බලෙන්ම 30 FPS වලට ලොක් කිරීම, සැහැල්ලු පාට සහ ලෝගෝ වැසීම
-            '-vf', 'fps=30,eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS සහ උඩ අයිනේ කළු පාට බොක්ස් එක විතරයි (පාට වෙනස් කරන්නේ නැත)
+            '-vf', 'fps=30,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කිසිම වෙනස්කමක් නොකර ඔරිජිනල් කොපි කිරීම
-            '-c:a', 'copy',
+            // 2. ශබ්දය ඉස්සරහට පැනීම (Drift) වැළැක්වීමට නියමිත A/V Sync සෙටින්ග්ස් සමඟ ඔරිජිනල් ශබ්දය
+            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
             // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
             '-c:v', 'libx264',
@@ -101,6 +101,10 @@ app.post('/start-fb-live', (req, res) => {
             '-maxrate', '700k',
             '-bufsize', '1400k',
             '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
+            '-b:a', '96k',
+            '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
@@ -120,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Fixed FPS for M3U8! 🚀</h2>');
+    res.send('<h2>Live started with Original Quality & Black Box! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
