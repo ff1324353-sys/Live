@@ -86,7 +86,7 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .outputOptions([
             // 1. සැහැල්ලු වීඩියෝ ෆිල්ටර් එක (සර්වර් එකට ලෝඩ් එක අඩු වීමට)
-            '-vf', 'eq=saturation=1.2:brightness=0.03,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.2:brightness=0.03,drawbox=x=iw-w-15:y=10:w=360:h=180:color=black@0.9:t=fill',
             
             // 2. ශබ්දයේ පිච් එක සැහැල්ලුවෙන් වෙනස් කිරීම
             '-af', 'rubberband=pitch=1.02',
