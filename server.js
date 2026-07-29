@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Optimized Low-Lag Stream:', streamUrl);
+    console.log('Starting Stable FPS Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,21 +85,22 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. සැහැල්ලු වීඩියෝ ෆිල්ටර් එක (සර්වර් එකට ලෝඩ් එක අඩු වීමට)
-            '-vf', 'eq=saturation=1.2:brightness=0.03,drawbox=x=iw-w-15:y=10:w=360:h=180:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර් එක (සැහැල්ලු පාට සහ ලෝගෝ වැසීම)
+            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=340:h=180:color=black@0.9:t=fill',
             
             // 2. ශබ්දයේ පිච් එක සැහැල්ලුවෙන් වෙනස් කිරීම
             '-af', 'rubberband=pitch=1.02',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ලැග් වළකන ඔප්ටිමයිස්ඩ් සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර 30 FPS ලබාදෙන සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-b:v', '800k',
-            '-maxrate', '800k',
-            '-bufsize', '1600k',
+            '-r', '30',             // ෆේස්බුක් එක ඉල්ලන ස්ථාවර 30 FPS ලබාදීම
+            '-g', '60',             // Keyframe interval එක තත්පර 2කට (30 * 2) සැකසීම
+            '-b:v', '700k',         // සර්වර් බර අඩුවීමට බිට්රේට් එක 700k කිරීම
+            '-maxrate', '700k',
+            '-bufsize', '1400k',
             '-pix_fmt', 'yuv420p',
-            '-g', '30',
             '-c:a', 'aac',
             '-b:a', '96k',
             '-ar', '44100',
@@ -123,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started smoothly (Low-Lag Mode)! 🚀</h2>');
+    res.send('<h2>Live started with Stable FPS Fix! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
