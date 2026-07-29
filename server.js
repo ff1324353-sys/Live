@@ -86,7 +86,7 @@ app.post('/start-fb-live', (req, res) => {
         ])
         .outputOptions([
             // 1. වීඩියෝ ෆිල්ටර්: නොකපා (Full Screen) පාට සහ ෂාප්නෙස් වැඩි කර AI එක රැවටීම
-            '-vf', 'eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
+            '-vf', 'eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=360:h=180:color=black@0.9:t=fill',
             
             // 2. ශබ්දය තියෙන ගමන් කොපිරයිට් අල්ලන්න බැරි වෙන්න පිච් (Pitch) එක වෙනස් කිරීම
             '-af', 'rubberband=pitch=1.04',
