@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Full-Screen M3U8 Stream with Anti-Copyright Shield:', streamUrl);
+    console.log('Starting Optimized Low-Lag Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -81,23 +81,23 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 30M',
-            '-analyzeduration 10M'
+            '-probesize 15M',
+            '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: නොකපා (Full Screen) පාට සහ ෂාප්නෙස් වැඩි කර AI එක රැවටීම
-            '-vf', 'eq=saturation=1.4:contrast=1.25:brightness=0.08:gamma=1.15,unsharp=5:5:1.0:5:5:0.0,drawbox=x=iw-w-15:y=10:w=360:h=180:color=black@0.9:t=fill',
+            // 1. සැහැල්ලු වීඩියෝ ෆිල්ටර් එක (සර්වර් එකට ලෝඩ් එක අඩු වීමට)
+            '-vf', 'eq=saturation=1.2:brightness=0.03,drawbox=x=iw-w-15:y=10:w=420:h=300:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය තියෙන ගමන් කොපිරයිට් අල්ලන්න බැරි වෙන්න පිච් (Pitch) එක වෙනස් කිරීම
-            '-af', 'rubberband=pitch=1.04',
+            // 2. ශබ්දයේ පිච් එක සැහැල්ලුවෙන් වෙනස් කිරීම
+            '-af', 'rubberband=pitch=1.02',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ලැග් වළකන ඔප්ටිමයිස්ඩ් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-b:v', '900k',
-            '-maxrate', '900k',
-            '-bufsize', '1800k',
+            '-b:v', '800k',
+            '-maxrate', '800k',
+            '-bufsize', '1600k',
             '-pix_fmt', 'yuv420p',
             '-g', '30',
             '-c:a', 'aac',
@@ -123,7 +123,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started successfully in Full Screen with T-Sports Link! 🚀</h2>');
+    res.send('<h2>Live started smoothly (Low-Lag Mode)! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
