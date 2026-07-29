@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Copyright Audio-Modified Stream:', streamUrl);
+    console.log('Starting Anti-Lag Server-Optimized Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -81,25 +81,25 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 20M',
-            '-analyzeduration 10M'
+            '-probesize 15M',
+            '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS, ශබ්දයට/බොට් රැවටීමට සැහැල්ලු Noise සහ කළු බොක්ස් එක
-            '-vf', 'fps=30,eq=saturation=1.05:brightness=0.01,noise=alls=5:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: සර්වර් බර අඩු කිරීමට 25 FPS, කළු බොක්ස් එක සහ සැහැල්ලු Noise එක
+            '-vf', 'fps=25,eq=saturation=1.05:brightness=0.01,noise=alls=5:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දයේ පිච් එක වෙනස් කිරීම (කොපිරයිට් වැළැක්වීමට) සහ එය වීඩියෝව සමඟම 100% Sync කිරීම
+            // 2. ශබ්දයේ පිච් එක සහ A/V ඩිස්කනෙක්ට් වීම වැළැක්වීමට තදබල රීසැම්ප්ලිං සෙටින්ග්ස්
             '-af', 'rubberband=pitch=1.04,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස් (බිට්රේට් එක 700k)
+            // 3. ස්ට්‍රීම් කෝඩින්ග් (සර්වර් ලෝඩ් එක අඩුවීමට බිට්රේට් එක 600k කර ඇත)
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
-            '-g', '60',
-            '-b:v', '700k',
-            '-maxrate', '700k',
-            '-bufsize', '1400k',
+            '-g', '50',          // 25 FPS වලට අදාළව Keyframe එක තත්පර 2කට (25 * 2) සැකසීම
+            '-b:v', '600k',
+            '-maxrate', '600k',
+            '-bufsize', '1200k',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
             '-b:a', '96k',
@@ -124,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Modified & Synced Audio! 🚀</h2>');
+    res.send('<h2>Live started with Anti-Lag Server-Optimized Settings! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -151,4 +151,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-         
