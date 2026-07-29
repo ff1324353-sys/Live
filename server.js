@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Anti-Lag Server-Optimized Stream:', streamUrl);
+    console.log('Starting Strong Anti-Copyright Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,18 +85,18 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: සර්වර් බර අඩු කිරීමට 25 FPS, කළු බොක්ස් එක සහ සැහැල්ලු Noise එක
-            '-vf', 'fps=25,eq=saturation=1.05:brightness=0.01,noise=alls=5:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් වෙනස් කිරීම, තද නොයිස් සහ විශාල කළු බොක්ස් එක
+            '-vf', 'fps=25,eq=saturation=1.12:brightness=0.03:contrast=1.05,noise=alls=12:allf=t+u,drawbox=x=iw-w-10:y=10:w=360:h=180:color=black@0.95:t=fill',
             
-            // 2. ශබ්දයේ පිච් එක සහ A/V ඩිස්කනෙක්ට් වීම වැළැක්වීමට තදබල රීසැම්ප්ලිං සෙටින්ග්ස්
-            '-af', 'rubberband=pitch=1.04,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+            // 2. ශබ්දය කොපිරයිට් බොට් එකට අහුවෙඩි අයුරින් පිච් එක වැඩි කිරීම සහ A/V Sync රීසැම්ප්ලිං
+            '-af', 'rubberband=pitch=1.08,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් (සර්වර් ලෝඩ් එක අඩුවීමට බිට්රේට් එක 600k කර ඇත)
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ සර්වර් බර අඩු කරන ස්ථාවර සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
-            '-g', '50',          // 25 FPS වලට අදාළව Keyframe එක තත්පර 2කට (25 * 2) සැකසීම
+            '-g', '50',
             '-b:v', '600k',
             '-maxrate', '600k',
             '-bufsize', '1200k',
@@ -124,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Anti-Lag Server-Optimized Settings! 🚀</h2>');
+    res.send('<h2>Live started with Strong Anti-Copyright Protection! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
