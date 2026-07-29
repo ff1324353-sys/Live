@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Clean Original Stream with Black Box Only:', streamUrl);
+    console.log('Starting Low-Bitrate Smooth Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,21 +85,21 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS සහ උඩ අයිනේ කළු පාට බොක්ස් එක විතරයි (පාට වෙනස් කරන්නේ නැත)
+            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS සහ කළු බොක්ස් එක
             '-vf', 'fps=30,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය ඉස්සරහට පැනීම (Drift) වැළැක්වීමට නියමිත A/V Sync සෙටින්ග්ස් සමඟ ඔරිජිනල් ශබ්දය
+            // 2. A/V Sync සෙටින්ග්ස්
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් (බිට්රේට් එක 500k දක්වා සැහැල්ලු කර ඇත)
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
             '-g', '60',
-            '-b:v', '700k',
-            '-maxrate', '700k',
-            '-bufsize', '1400k',
+            '-b:v', '500k',
+            '-maxrate', '500k',
+            '-bufsize', '1000k',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
             '-b:a', '96k',
@@ -124,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Original Quality & Black Box! 🚀</h2>');
+    res.send('<h2>Live started with Optimized Low Bitrate (500k)! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
