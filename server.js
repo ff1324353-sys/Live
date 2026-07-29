@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Strong Anti-Copyright Stream:', streamUrl);
+    console.log('Starting Stable Non-Crash Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,13 +85,13 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් වෙනස් කිරීම, තද නොයිස් සහ විශාල කළු බොක්ස් එක
-            '-vf', 'fps=25,eq=saturation=1.12:brightness=0.03:contrast=1.05,noise=alls=12:allf=t+u,drawbox=x=iw-w-10:y=10:w=360:h=180:color=black@0.95:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS, ක්‍රොප් කර සහ කළු බොක්ස් එක දැමීම (කෝඩ් 224 එරර් නොඑන අයුරින් සකසා ඇත)
+            '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කොපිරයිට් බොට් එකට අහුවෙඩි අයුරින් පිච් එක වැඩි කිරීම සහ A/V Sync රීසැම්ප්ලිං
-            '-af', 'rubberband=pitch=1.08,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+            // 2. ශබ්දය සඳහා කෝඩ් 224 දෙන Rubberband අයින් කර, සාර්ථක සහ සැහැල්ලු A/V Sync රීසැම්ප්ලිං පමණක් භාවිතය
+            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ සර්වර් බර අඩු කරන ස්ථාවර සෙටින්ග්ස්
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
@@ -124,7 +124,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Strong Anti-Copyright Protection! 🚀</h2>');
+    res.send('<h2>Live started without Code 224 Error! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
