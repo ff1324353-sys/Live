@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Synced Stream:', streamUrl);
+    console.log('Starting Fixed-FPS M3U8 Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -81,28 +81,26 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 15M',
-            '-analyzeduration 5M'
+            '-probesize 20M',
+            '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර් (සැහැල්ලු පාට සහ ලෝගෝ වැසීම)
-            '-vf', 'eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=320:h=120:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: බලෙන්ම 30 FPS වලට ලොක් කිරීම, සැහැල්ලු පාට සහ ලෝගෝ වැසීම
+            '-vf', 'fps=30,eq=saturation=1.15:brightness=0.02,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දයේ පිච් එක සහ ඕඩියෝ/වීඩියෝ එකටම සින්ක් කිරීම (Audio-Video Sync)
-              '-c:a', 'copy',
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ A/V Sync තහවුරු කරන සෙටින්ග්ස්
-             '-c:v', 'libx264',
+            // 2. ශබ්දය කිසිම වෙනස්කමක් නොකර ඔරිජිනල් කොපි කිරීම
+            '-c:a', 'copy',
+
+            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
+            '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-b:v', '1500k',
-            '-maxrate', '1500k',
-            '-bufsize', '3000k',
+            '-fps_mode', 'cfr',
+            '-g', '60',
+            '-b:v', '700k',
+            '-maxrate', '700k',
+            '-bufsize', '1400k',
             '-pix_fmt', 'yuv420p',
-            '-g', '30',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
             '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
@@ -122,7 +120,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Audio-Video Sync Fix! 🚀</h2>');
+    res.send('<h2>Live started with Fixed FPS for M3U8! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
