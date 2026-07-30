@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// YouTube එකට ඔරිජිනල් කොවලිටියෙන් සහ කළු බොක්ස් එක පමණක් දමා ලයිව් පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
@@ -67,7 +67,7 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting High Quality YouTube Stream:', streamUrl);
+    console.log('Starting Original Quality YouTube Stream with Black Box:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -79,46 +79,34 @@ app.post('/start-yt-live', (req, res) => {
             '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. පැහැදිලි HD 720p රෙසොලුෂන් සහ සුමට 30 FPS සඳහා සැකසූ වීඩියෝ ෆිල්ටර්
-            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
+            // 1. වීඩියෝවට කිසිම රෙසොලුෂන් වෙනසක් නොකර, මුල් තත්ත්වයෙන්ම තබා කළු බොක්ස් එක (Drawbox) පමණක් යෙදීම
+            '-vf', 'drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
-            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+            // 2. වීඩියෝ සහ ශබ්දය (Audio/Video) කිසිදු ලැගීමකින් තොරව ඔරිජිනල් ස්ට්‍රීම් එක ලෙසම (Stream Copy) YouTube වෙත යැවීම
+            '-c:v', 'copy',
+            '-c:a', 'copy',
 
-            // 3. HD Quality එකට ගැළපෙන ප්‍රශස්ත Bitrate සහ Preset සැකසුම් (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
-            '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-tune', 'zerolatency',
-            '-fps_mode', 'cfr',
-            '-g', '60',
-            '-b:v', '1800k',
-            '-maxrate', '2200k',
-            '-bufsize', '3600k',
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
+            // 3. ස්ට්‍රීම් ස්ථාවරත්වය සඳහා අවශ්‍ය මූලික සැකසුම්
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg HD Stream spawned:', commandLine);
+            console.log('FFmpeg Original Copy Stream spawned:', commandLine);
         })
         .on('error', (err) => {
-            console.error('YouTube HD Streaming error:', err.message);
+            console.error('YouTube Original Streaming error:', err.message);
             activeStreamProcess = null;
         })
         .on('end', () => {
-            console.log('YouTube HD Streaming finished.');
+            console.log('YouTube Original Streaming finished.');
             activeStreamProcess = null;
         });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>High Quality HD Live started successfully! 🚀</h2>');
+    res.send('<h2>Original Quality Live started with Black Box! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
