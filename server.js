@@ -85,21 +85,20 @@ app.post('/start-yt-live', (req, res) => {
             // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. සර්වර් CPU බර අවම කරන සහ ස්ථාවරව දිගු වේලාවක් දුවන Encoder සැකසුම්
+              // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',  // CPU එකට එකපාරටම බර වැඩිවීම වළක්වයි
+            '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '1800k',        // කනෙක්ට් වීමට හොඳ සහ ස්ථාවර මධ්‍යම බිට්රේට් අගයක්
-            '-maxrate', '2000k',
-            '-bufsize', '4000k',
+            '-b:v', '1500k',
+            '-maxrate', '1500k',
+            '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
+            '-g', '30',
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
-            '-max_muxing_queue_size', '99999',
+            '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
         .output(ytRtmpUrl)
