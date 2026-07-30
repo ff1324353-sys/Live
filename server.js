@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට ලැගීමකින් තොරව ස්ථාවරව ලයිව් පටන් ගන්න රූට් එක (Low Bitrate & Stable)
+// YouTube එකට ස්ථාවර සහ නිවැරදි Bitrate එකකින් ලයිව් පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
@@ -67,7 +67,7 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Stable Low-Bitrate YouTube Stream:', streamUrl);
+    console.log('Starting Balanced YouTube Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -79,24 +79,24 @@ app.post('/start-yt-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS සහ කළු පාට කොටුව (Drawbox) පමණක් යෙදීම
+            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS සහ කළු පාට කොටුව (Drawbox)
             '-vf', 'fps=25,scale=1280:720,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
             // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. Bitrate එක අඩු කර සර්වර් බර අවම කිරීම (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
+            // 3. YouTube එකට හරියටම සම්බන්ධ වන ප්‍රශස්ත Bitrate සැකසුම් (1200k)
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
             '-g', '50',
-            '-b:v', '800k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (සුමට ක්‍රියාකාරීත්වය සඳහා)
-            '-maxrate', '1000k',
-            '-bufsize', '2000k',
+            '-b:v', '1200k',       // YouTube එකට ගැළපෙන හොඳම මධ්‍යම බිට්රේට් අගය
+            '-maxrate', '1500k',
+            '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
-            '-b:a', '96k',
+            '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             '-max_muxing_queue_size', '99999',
@@ -104,7 +104,7 @@ app.post('/start-yt-live', (req, res) => {
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg Low-Bitrate Stream spawned:', commandLine);
+            console.log('FFmpeg Balanced Stream spawned:', commandLine);
         })
         .on('error', (err) => {
             console.error('YouTube Streaming error:', err.message);
@@ -118,7 +118,7 @@ app.post('/start-yt-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Stable Low-Bitrate Live started successfully! 🚀</h2>');
+    res.send('<h2>Balanced YouTube Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
