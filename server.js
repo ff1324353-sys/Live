@@ -56,22 +56,18 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// YouTube එකට HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
-    // ෆ්‍රොන්ට්එන්ඩ් එකෙන් Key එක දුන්නොත් ඒක ගන්නවා, නැත්නම් ඔයා දුන් ස්ථිර Key එක පාවිච්චි කරනවා
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
-    
-    // ඔයා දුන් .m3u8 ලින්ක් එක
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
 
     if (activeStreamProcess) {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    // YouTube RTMP URL එක සහ Key එක එකතු කිරීම
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting YouTube Stable Live Stream:', streamUrl);
+    console.log('Starting High Quality YouTube Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -79,28 +75,28 @@ app.post('/start-yt-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 15M',
-            '-analyzeduration 5M'
+            '-probesize 20M',
+            '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS, ක්‍රොප් කර සහ කළු බොක්ස් එක දැමීම (කෝඩ් 224 එරර් නොඑන අයුරින්)
-            '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. පැහැදිලි HD 720p රෙසොලුෂන් සහ සුමට 30 FPS සඳහා සැකසූ වීඩියෝ ෆිල්ටර්
+            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
             
-            // 2. ශබ්දය සඳහා සාර්ථක සහ සැහැල්ලු A/V Sync රීසැම්ප්ලිං පමණක් භාවිතය
+            // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
+            // 3. HD Quality එකට ගැළපෙන ප්‍රශස්ත Bitrate සහ Preset සැකසුම් (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', 'veryfast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '600k',
-            '-maxrate', '600k',
-            '-bufsize', '1200k',
+            '-g', '60',
+            '-b:v', '1800k',
+            '-maxrate', '2200k',
+            '-bufsize', '3600k',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
-            '-b:a', '96k',
+            '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             '-max_muxing_queue_size', '99999',
@@ -108,21 +104,21 @@ app.post('/start-yt-live', (req, res) => {
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned for YouTube:', commandLine);
+            console.log('FFmpeg HD Stream spawned:', commandLine);
         })
         .on('error', (err) => {
-            console.error('YouTube Streaming error:', err.message);
+            console.error('YouTube HD Streaming error:', err.message);
             activeStreamProcess = null;
         })
         .on('end', () => {
-            console.log('YouTube Streaming finished.');
+            console.log('YouTube HD Streaming finished.');
             activeStreamProcess = null;
         });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>YouTube Live started successfully without Code 224! 🚀</h2>');
+    res.send('<h2>High Quality HD Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
