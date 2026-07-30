@@ -80,7 +80,7 @@ app.post('/start-yt-live', (req, res) => {
         ])
         .outputOptions([
             // 1. පැහැදිලි HD 720p රෙසොලුෂන් සහ සුමට 30 FPS සඳහා සැකසූ වීඩියෝ ෆිල්ටර්
-            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
+            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
             // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
