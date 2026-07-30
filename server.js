@@ -80,7 +80,7 @@ app.post('/start-yt-live', (req, res) => {
         ])
         .outputOptions([
             // 1. වීඩියෝවට කිසිම රෙසොලුෂන් වෙනසක් නොකර, මුල් තත්ත්වයෙන්ම තබා කළු බොක්ස් එක (Drawbox) පමණක් යෙදීම
-            '-vf', 'drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
+            '-vf', 'drawbox=x=iw-w-15:y=10:w=260:h=800:color=black@0.9:t=fill',
             
             // 2. වීඩියෝ සහ ශබ්දය (Audio/Video) කිසිදු ලැගීමකින් තොරව ඔරිජිනල් ස්ට්‍රීම් එක ලෙසම (Stream Copy) YouTube වෙත යැවීම
             '-c:v', 'copy',
