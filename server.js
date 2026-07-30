@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට ඔරිජිනල් කොවලිටියෙන් සහ කළු බොක්ස් එක පමණක් දමා ලයිව් පටන් ගන්න රූට් එක
+// YouTube එකට අතිශය අඩු ප්‍රමාදයක් සහිතව (Zero-Latency) ලැගීමකින් තොරව ලයිව් පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
@@ -67,46 +67,55 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Original Quality YouTube Stream with Black Box:', streamUrl);
+    console.log('Starting Ultra-Low Latency YouTube Stream (Lag-Free Config):', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
-            '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts',
-            '-probesize 20M',
-            '-analyzeduration 10M'
+            '-reconnect_delay_max 2', // තවත් අඩු කළා
+            '-fflags +discardcorrupt+genpts+nobuffer', // Nobuffer එකතු කළා
+            '-probesize 10M',
+            '-analyzeduration 3M'
         ])
         .outputOptions([
-            // 1. වීඩියෝවට කිසිම රෙසොලුෂන් වෙනසක් නොකර, මුල් තත්ත්වයෙන්ම තබා කළු බොක්ස් එක (Drawbox) පමණක් යෙදීම
-            '-vf', 'drawbox=x=iw-w-15:y=10:w=260:h=800:color=black@0.9:t=fill',
+            // 1. මූලාශ්‍රයේ FPS එකම පවත්වාගෙන යාම (ප්‍රමාණ වෙනස් නොකර)
+            '-vf', 'drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
-            // 2. වීඩියෝ සහ ශබ්දය (Audio/Video) කිසිදු ලැගීමකින් තොරව ඔරිජිනල් ස්ට්‍රීම් එක ලෙසම (Stream Copy) YouTube වෙත යැවීම
-            '-c:v', 'copy',
-            '-c:a', 'copy',
-
-            // 3. ස්ට්‍රීම් ස්ථාවරත්වය සඳහා අවශ්‍ය මූලික සැකසුම්
+            // 2. ශබ්දය: AAC ලෙස සැහැල්ලුවෙන් නැවත සැකසීම (A/V Sync ගැටලු වළක්වයි)
+            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '2',
+            
+            // 3. වීඩියෝ: අතිශය වේගවත් කේතනය සහ ලැගීම වළක්වන විශේෂ සැකසුම්
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast', // හැකි තරම් වේගයෙන් කේතනය කරයි
+            '-tune', 'zerolatency',  // ලැගීම සම්පූර්ණයෙන්ම වළක්වයි
+            '-crf', '26',            // මෙය මගින් Quality එක හොඳ මට්ටමක තබාගෙන සර්වර් එකට පහසු ලෙස Bitrate එක අඩු කරයි
+            '-g', '50',              // Keyframe interval
+            '-maxrate', '2500k',
+            '-bufsize', '5000k',
+            '-pix_fmt', 'yuv420p',
+            
+            // 4. ස්ට්‍රීම් ස්ථාවරත්වය
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg Original Copy Stream spawned:', commandLine);
+            console.log('FFmpeg Ultra-Low Latency Stream spawned:', commandLine);
         })
         .on('error', (err) => {
-            console.error('YouTube Original Streaming error:', err.message);
+            console.error('YouTube Streaming error:', err.message);
             activeStreamProcess = null;
         })
         .on('end', () => {
-            console.log('YouTube Original Streaming finished.');
+            console.log('YouTube Streaming finished.');
             activeStreamProcess = null;
         });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Original Quality Live started with Black Box! 🚀</h2>');
+    res.send('<h2>Ultra-Low Latency Live started! (Lag-Free) 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
