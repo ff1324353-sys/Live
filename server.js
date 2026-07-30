@@ -56,24 +56,22 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
-app.post('/start-fb-live', (req, res) => {
-    const streamKey = req.body.streamKey;
+// YouTube එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+app.post('/start-yt-live', (req, res) => {
+    // ෆ්‍රොන්ට්එන්ඩ් එකෙන් Key එක දුන්නොත් ඒක ගන්නවා, නැත්නම් ඔයා දුන් ස්ථිර Key එක පාවිච්චි කරනවා
+    const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     
     // ඔයා දුන් .m3u8 ලින්ක් එක
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
-
-    if (!streamKey) {
-        return res.status(400).send('Stream Key required!');
-    }
 
     if (activeStreamProcess) {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
+    // YouTube RTMP URL එක සහ Key එක එකතු කිරීම
+    const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Stable Non-Crash Stream:', streamUrl);
+    console.log('Starting YouTube Stable Live Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -85,10 +83,10 @@ app.post('/start-fb-live', (req, res) => {
             '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS, ක්‍රොප් කර සහ කළු බොක්ස් එක දැමීම (කෝඩ් 224 එරර් නොඑන අයුරින් සකසා ඇත)
+            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS, ක්‍රොප් කර සහ කළු බොක්ස් එක දැමීම (කෝඩ් 224 එරර් නොඑන අයුරින්)
             '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය සඳහා කෝඩ් 224 දෙන Rubberband අයින් කර, සාර්ථක සහ සැහැල්ලු A/V Sync රීසැම්ප්ලිං පමණක් භාවිතය
+            // 2. ශබ්දය සඳහා සාර්ථක සහ සැහැල්ලු A/V Sync රීසැම්ප්ලිං පමණක් භාවිතය
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
             // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
@@ -108,23 +106,23 @@ app.post('/start-fb-live', (req, res) => {
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
-        .output(fbRtmpUrl)
+        .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned:', commandLine);
+            console.log('FFmpeg spawned for YouTube:', commandLine);
         })
         .on('error', (err) => {
-            console.error('Streaming error:', err.message);
+            console.error('YouTube Streaming error:', err.message);
             activeStreamProcess = null;
         })
         .on('end', () => {
-            console.log('Streaming finished.');
+            console.log('YouTube Streaming finished.');
             activeStreamProcess = null;
         });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started without Code 224 Error! 🚀</h2>');
+    res.send('<h2>YouTube Live started successfully without Code 224! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
