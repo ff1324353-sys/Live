@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට ස්ථාවර සහ නිවැරදි Bitrate එකකින් ලයිව් පටන් ගන්න රූට් එක
+// YouTube එකට නිවැරදි HD Bitrate එකෙන් ලයිව් පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
@@ -67,7 +67,7 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Balanced YouTube Stream:', streamUrl);
+    console.log('Starting Optimized HD YouTube Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -75,25 +75,25 @@ app.post('/start-yt-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 15M',
-            '-analyzeduration 5M'
+            '-probesize 20M',
+            '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS සහ කළු පාට කොටුව (Drawbox)
-            '-vf', 'fps=25,scale=1280:720,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: 30 FPS, HD රෙසොලුෂන් සහ කළු පාට කොටුව (Drawbox)
+            '-vf', 'fps=30,scale=1280:720,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
             // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
             '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. YouTube එකට හරියටම සම්බන්ධ වන ප්‍රශස්ත Bitrate සැකසුම් (1200k)
+            // 3. YouTube HD සඳහා අවශ්‍ය ප්‍රශස්ත Bitrate සහ Encoder සැකසුම්
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', 'veryfast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '1200k',       // YouTube එකට ගැළපෙන හොඳම මධ්‍යම බිට්රේට් අගය
-            '-maxrate', '1500k',
-            '-bufsize', '3000k',
+            '-g', '60',
+            '-b:v', '2200k',       // කනෙක්ට් වීමට ප්‍රමාණවත් සහ පැහැදිලි Bitrate අගයක්
+            '-maxrate', '2500k',
+            '-bufsize', '5000k',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
             '-b:a', '128k',
@@ -104,7 +104,7 @@ app.post('/start-yt-live', (req, res) => {
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg Balanced Stream spawned:', commandLine);
+            console.log('FFmpeg Optimized HD Stream spawned:', commandLine);
         })
         .on('error', (err) => {
             console.error('YouTube Streaming error:', err.message);
@@ -118,7 +118,7 @@ app.post('/start-yt-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Balanced YouTube Live started successfully! 🚀</h2>');
+    res.send('<h2>Optimized HD Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
