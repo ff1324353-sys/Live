@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට අතිශය අඩු ප්‍රමාදයක් සහිතව (Zero-Latency) ලැගීමකින් තොරව ලයිව් පටන් ගන්න රූට් එක
+// YouTube එකට ලැගීමකින් තොරව ස්ථාවරව ලයිව් පටන් ගන්න රූට් එක (Low Bitrate & Stable)
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8";
@@ -67,41 +67,44 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Ultra-Low Latency YouTube Stream (Lag-Free Config):', streamUrl);
+    console.log('Starting Stable Low-Bitrate YouTube Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
             '-reconnect 1',
             '-reconnect_streamed 1',
-            '-reconnect_delay_max 2', // තවත් අඩු කළා
-            '-fflags +discardcorrupt+genpts+nobuffer', // Nobuffer එකතු කළා
-            '-probesize 10M',
-            '-analyzeduration 3M'
+            '-reconnect_delay_max 5',
+            '-fflags +discardcorrupt+genpts',
+            '-probesize 15M',
+            '-analyzeduration 5M'
         ])
         .outputOptions([
-            // 1. මූලාශ්‍රයේ FPS එකම පවත්වාගෙන යාම (ප්‍රමාණ වෙනස් නොකර)
-            '-vf', 'drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
+            // 1. වීඩියෝ ෆිල්ටර්: 25 FPS සහ කළු පාට කොටුව (Drawbox) පමණක් යෙදීම
+            '-vf', 'fps=25,scale=1280:720,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය: AAC ලෙස සැහැල්ලුවෙන් නැවත සැකසීම (A/V Sync ගැටලු වළක්වයි)
-            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '2',
-            
-            // 3. වීඩියෝ: අතිශය වේගවත් කේතනය සහ ලැගීම වළක්වන විශේෂ සැකසුම්
+            // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
+            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+
+            // 3. Bitrate එක අඩු කර සර්වර් බර අවම කිරීම (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
             '-c:v', 'libx264',
-            '-preset', 'ultrafast', // හැකි තරම් වේගයෙන් කේතනය කරයි
-            '-tune', 'zerolatency',  // ලැගීම සම්පූර්ණයෙන්ම වළක්වයි
-            '-crf', '26',            // මෙය මගින් Quality එක හොඳ මට්ටමක තබාගෙන සර්වර් එකට පහසු ලෙස Bitrate එක අඩු කරයි
-            '-g', '50',              // Keyframe interval
-            '-maxrate', '2500k',
-            '-bufsize', '5000k',
+            '-preset', 'ultrafast',
+            '-tune', 'zerolatency',
+            '-fps_mode', 'cfr',
+            '-g', '50',
+            '-b:v', '800k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (සුමට ක්‍රියාකාරීත්වය සඳහා)
+            '-maxrate', '1000k',
+            '-bufsize', '2000k',
             '-pix_fmt', 'yuv420p',
-            
-            // 4. ස්ට්‍රීම් ස්ථාවරත්වය
+            '-c:a', 'aac',
+            '-b:a', '96k',
+            '-ar', '44100',
+            '-ac', '2',
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
         .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg Ultra-Low Latency Stream spawned:', commandLine);
+            console.log('FFmpeg Low-Bitrate Stream spawned:', commandLine);
         })
         .on('error', (err) => {
             console.error('YouTube Streaming error:', err.message);
@@ -115,7 +118,7 @@ app.post('/start-yt-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Ultra-Low Latency Live started! (Lag-Free) 🚀</h2>');
+    res.send('<h2>Stable Low-Bitrate Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
