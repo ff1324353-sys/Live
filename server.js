@@ -91,21 +91,20 @@ app.post('/start-fb-live', (req, res) => {
             // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම (කෝඩ් 224 එරර් නොඑයි)
             '-af', 'treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            // 3. ස්ට්‍රීම් කෝඩින්ග් සහ ස්ථාවර සෙටින්ග්ස්
+            
+            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '600k',
-            '-maxrate', '600k',
-            '-bufsize', '1200k',
+            '-b:v', '1500k',
+            '-maxrate', '1500k',
+            '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
+            '-g', '30',
             '-c:a', 'aac',
-            '-b:a', '96k',
+            '-b:a', '128k',
             '-ar', '44100',
-            '-ac', '2',
-            '-max_muxing_queue_size', '99999',
+            '-max_muxing_queue_size', '9999',
             '-f', 'flv'
         ])
         .output(fbRtmpUrl)
