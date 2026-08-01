@@ -1,4 +1,4 @@
-Const express = require('express');
+const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 const http = require('http');
@@ -153,5 +153,3 @@ server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
           
-
-Bitrate Eka adu unama kohomath play wenne na. Wadi karath wadi wela thiyenne na lag wenawa
