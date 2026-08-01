@@ -1,4 +1,4 @@
-Const express = require('express');
+const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 const http = require('http');
@@ -153,4 +153,3 @@ server.listen(PORT, () => {
 });
           
 
-Tika welawak giyama waiting for live signal kiyala load wenawa
