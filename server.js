@@ -84,30 +84,31 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 15M',
             '-analyzeduration 5M'
         ])
-                .outputOptions([
-            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් මාරු කිරීම, කුඩා නොයිස් එකක් සහ කළු බොක්ස් එක
+        .outputOptions([
+            // 1. වීඩියෝ ෆිල්ටර් එක (කළු බොක්ස් එක දැමීම)
             '-vf', 'drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම
-               '-c:a', 'copy',
-            // 3. Bitrate එක 800k දක්වා අඩු කර ස්ථාවරව දිගු වේලාවක් දුවන්න සැකසූ කෝඩින්ග් සෙටින්ග්ස්
-            '-c:v',   '-c:v', 'copy',',
+            // 2. වීඩියෝ කෝඩර් සැකසුම් (Filter එකක් දමන නිසා libx264 භාවිතා කළ යුතුය)
+            '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
             '-g', '50',
-            '-b:v', '1500k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
+            '-b:v', '1500k',
             '-maxrate', '2000k',
             '-bufsize', '3000k',
             '-pix_fmt', 'yuv420p',
+
+            // 3. ඕඩියෝ කෝඩර් සැකසුම්
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
+
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
-
+        .output(fbRunits = fbRtmpUrl) // Fixing variable assignment reference if any, or directly:
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
@@ -151,5 +152,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-          
-
