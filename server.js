@@ -1,4 +1,4 @@
-const express = require('express');
+Const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 const http = require('http');
@@ -56,24 +56,18 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
-app.post('/start-fb-live', (req, res) => {
-    const streamKey = req.body.streamKey;
-    
-    // ඔයා දුන් .m3u8 ලින්ක් එක
+// YouTube එකට HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+app.post('/start-yt-live', (req, res) => {
+    const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-47";
-
-    if (!streamKey) {
-        return res.status(400).send('Stream Key required!');
-    }
 
     if (activeStreamProcess) {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
+    const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting Deep-Filtered Anti-Copyright Stream:', streamUrl);
+    console.log('Starting High Quality YouTube Stream:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -81,51 +75,50 @@ app.post('/start-fb-live', (req, res) => {
             '-reconnect_streamed 1',
             '-reconnect_delay_max 5',
             '-fflags +discardcorrupt+genpts',
-            '-probesize 15M',
-            '-analyzeduration 5M'
+            '-probesize 20M',
+            '-analyzeduration 10M'
         ])
         .outputOptions([
-            // 1. වීඩියෝ ෆිල්ටර් එක (කළු බොක්ස් එක දැමීම)
-            '-vf', 'drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            // 1. පැහැදිලි HD 720p රෙසොලුෂන් සහ සුමට 30 FPS සඳහා සැකසූ වීඩියෝ ෆිල්ටර්
+            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6,drawbox=x=iw-w-15:y=10:w=280:h=100:color=black@0.9:t=fill',
             
-            // 2. වීඩියෝ කෝඩර් සැකසුම් (Filter එකක් දමන නිසා libx264 භාවිතා කළ යුතුය)
+            // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
+            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+
+            // 3. HD Quality එකට ගැළපෙන ප්‍රශස්ත Bitrate සහ Preset සැකසුම් (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', 'veryfast',
             '-tune', 'zerolatency',
             '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '1500k',
-            '-maxrate', '2000k',
-            '-bufsize', '3000k',
+            '-g', '60',
+            '-b:v', '1800k',
+            '-maxrate', '2200k',
+            '-bufsize', '3600k',
             '-pix_fmt', 'yuv420p',
-
-            // 3. ඕඩියෝ කෝඩර් සැකසුම්
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
-
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
-        .output(fbRunits = fbRtmpUrl) // Fixing variable assignment reference if any, or directly:
-        .output(fbRtmpUrl)
+        .output(ytRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned:', commandLine);
+            console.log('FFmpeg HD Stream spawned:', commandLine);
         })
         .on('error', (err) => {
-            console.error('Streaming error:', err.message);
+            console.error('YouTube HD Streaming error:', err.message);
             activeStreamProcess = null;
         })
         .on('end', () => {
-            console.log('Streaming finished.');
+            console.log('YouTube HD Streaming finished.');
             activeStreamProcess = null;
         });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Deep Anti-Copyright Shield! 🚀</h2>');
+    res.send('<h2>High Quality HD Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -152,3 +145,5 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+Tikak wela giyama lag wenna gannawa. Audio, video original vidiytama dunna nam hari ne. Kalu box Eka witharak thiyenna denna
