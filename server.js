@@ -1,4 +1,4 @@
-Const express = require('express');
+const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 const http = require('http');
@@ -146,4 +146,3 @@ server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
-Tikak wela giyama lag wenna gannawa. Audio, video original vidiytama dunna nam hari ne. Kalu box Eka witharak thiyenna denna
