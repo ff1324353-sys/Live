@@ -84,29 +84,31 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 15M',
             '-analyzeduration 5M'
         ])
-        .outputOptions([
-            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් මාරු කිරීම (Hue/Saturation), කුඩා නොයිස් එකක් සහ කළු බොක්ස් එක
+                .outputOptions([
+            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් මාරු කිරීම, කුඩා නොයිස් එකක් සහ කළු බොක්ස් එක
             '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,eq=saturation=1.15:brightness=0.02,noise=alls=8:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම (කෝඩ් 224 එරර් නොඑයි)
+            // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම
             '-af', 'treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-            
-            // 3. කෝඩින්ග් සහ ස්ට්‍රීම් සෙටින්ග්ස්
+            // 3. Bitrate එක 800k දක්වා අඩු කර ස්ථාවරව දිගු වේලාවක් දුවන්න සැකසූ කෝඩින්ග් සෙටින්ග්ස්
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-b:v', '1500k',
-            '-maxrate', '1500k',
-            '-bufsize', '3000k',
+            '-fps_mode', 'cfr',
+            '-g', '50',
+            '-b:v', '800k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
+            '-maxrate', '900k',
+            '-bufsize', '1800k',
             '-pix_fmt', 'yuv420p',
-            '-g', '30',
             '-c:a', 'aac',
-            '-b:a', '128k',
+            '-b:a', '96k',
             '-ar', '44100',
-            '-max_muxing_queue_size', '9999',
+            '-ac', '2',
+            '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
+
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
             console.log('FFmpeg spawned:', commandLine);
