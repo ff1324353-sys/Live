@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// ෆේස්බුක් එකට ඔරිජිනල් කොවලිටියෙන් සහ කළු බොක්ස් එක පමණක් දමා ලයිව් පටන් ගන්න රූට් එක
 app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
@@ -73,7 +73,7 @@ app.post('/start-fb-live', (req, res) => {
 
     const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    console.log('Starting Deep-Filtered Anti-Copyright Stream:', streamUrl);
+    console.log('Starting Original Quality Stream with Black Box:', streamUrl);
 
     const command = ffmpeg(streamUrl)
         .inputOptions([
@@ -84,34 +84,21 @@ app.post('/start-fb-live', (req, res) => {
             '-probesize 15M',
             '-analyzeduration 5M'
         ])
-                .outputOptions([
-            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් මාරු කිරීම, කුඩා නොයිස් එකක් සහ කළු බොක්ස් එක
-            '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,eq=saturation=1.15:brightness=0.02,noise=alls=8:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+        .outputOptions([
+            // 1. වීඩියෝවට කිසිම රෙසොලුෂන් වෙනසක් හෝ ප්‍රමිතියක් වෙනස් නොකර, කළු බොක්ස් එක (Drawbox) පමණක් යෙදීම
+            '-vf', 'drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
             
-            // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම
-            '-af', 'treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+            // 2. වීඩියෝ සහ ශබ්දය (Audio/Video) කිසිදු වෙනසකින් තොරව ඔරිජිනල් ස්ට්‍රීම් එක ලෙසම (Stream Copy) යැවීම
+            '-c:v', 'copy',
+            '-c:a', 'copy',
 
-            // 3. Bitrate එක 800k දක්වා අඩු කර ස්ථාවරව දිගු වේලාවක් දුවන්න සැකසූ කෝඩින්ග් සෙටින්ග්ස්
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-tune', 'zerolatency',
-            '-fps_mode', 'cfr',
-            '-g', '50',
-            '-b:v', '1500k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
-            '-maxrate', '2000k',
-            '-bufsize', '3000k',
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
+            // 3. ස්ට්‍රීම් ස්ථාවරත්වය සඳහා අවශ්‍ය සැකසුම්
             '-max_muxing_queue_size', '99999',
             '-f', 'flv'
         ])
-
         .output(fbRtmpUrl)
         .on('start', (commandLine) => {
-            console.log('FFmpeg spawned:', commandLine);
+            console.log('FFmpeg Original Copy Stream spawned:', commandLine);
         })
         .on('error', (err) => {
             console.error('Streaming error:', err.message);
@@ -125,7 +112,7 @@ app.post('/start-fb-live', (req, res) => {
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Live started with Deep Anti-Copyright Shield! 🚀</h2>');
+    res.send('<h2>Original Quality Live started with Black Box! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -152,4 +139,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-          
