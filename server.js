@@ -61,7 +61,7 @@ app.post('/start-fb-live', (req, res) => {
     const streamKey = req.body.streamKey;
     
     // ඔයා දුන් .m3u8 ලින්ක් එක
-    const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8?nocache=1783826412104";
+    const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-47";
 
     if (!streamKey) {
         return res.status(400).send('Stream Key required!');
