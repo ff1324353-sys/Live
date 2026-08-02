@@ -56,7 +56,7 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+// YouTube එකට ටයිමර් එකත් සමඟ HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
 app.post('/start-yt-live', (req, res) => {
     const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
     const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-4";
@@ -67,58 +67,87 @@ app.post('/start-yt-live', (req, res) => {
 
     const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
 
-    console.log('Starting High Quality YouTube Stream:', streamUrl);
+    // ශ්‍රී ලංකා වෙලාව (GMT+5:30) ලබා ගැනීම
+    const now = new Date();
+    const lkTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
+    const currentHours = lkTime.getHours();
+    const currentMinutes = lkTime.getMinutes();
 
-    const command = ffmpeg(streamUrl)
-        .inputOptions([
-            '-reconnect 1',
-            '-reconnect_streamed 1',
-            '-reconnect_delay_max 5',
-            '-fflags +discardcorrupt+genpts',
-            '-probesize 20M',
-            '-analyzeduration 10M'
-        ])
-        .outputOptions([
-            // 1. පැහැදිලි HD 720p රෙසොලුෂන් සහ සුමට 30 FPS සඳහා සැකසූ වීඩියෝ ෆිල්ටර්
-            '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
-            
-            // 2. ශබ්දය සඳහා සැහැල්ලු සහ ස්ථාවර රීසැම්ප්ලිං
-            '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+    // මැච් පටන් ගන්න වෙලාව: සවස 7.10 (පැය 19, මිනිත්තු 10)
+    const targetHours = 19;
+    const targetMinutes = 10;
 
-            // 3. HD Quality එකට ගැළපෙන ප්‍රශස්ත Bitrate සහ Preset සැකසුම් (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
-            '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-tune', 'zerolatency',
-            '-fps_mode', 'cfr',
-            '-g', '60',
-            '-b:v', '1800k',
-            '-maxrate', '2200k',
-            '-bufsize', '3600k',
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
-            '-max_muxing_queue_size', '99999',
-            '-f', 'flv'
-        ])
-        .output(ytRtmpUrl)
-        .on('start', (commandLine) => {
-            console.log('FFmpeg HD Stream spawned:', commandLine);
-        })
-        .on('error', (err) => {
-            console.error('YouTube HD Streaming error:', err.message);
-            activeStreamProcess = null;
-        })
-        .on('end', () => {
-            console.log('YouTube HD Streaming finished.');
-            activeStreamProcess = null;
-        });
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const targetTimeInMinutes = targetHours * 60 + targetMinutes;
+
+    let command;
+
+    if (currentTimeInMinutes < targetTimeInMinutes) {
+        console.log('Match time not reached yet. Starting Standby Screen with Text...');
+        
+        // 7.10 වෙනතුරු කළු ස්ක්‍රීන් එකක් මත "LPL MATCH START 7.10 P.M" පෙන්නන ෆිල්ටර් එක
+        command = ffmpeg('color=c=black:s=1280x720:r=25')
+            .inputFormat('lavfi')
+            .outputOptions([
+                '-vf', 'drawtext=text=\'LPL MATCH START 7.10 P.M\':fontcolor=white:fontsize=50:x=(w-text_w)/2:y=(h-text_h)/2',
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-pix_fmt', 'yuv420p',
+                '-f', 'flv'
+            ])
+            .output(ytRtmpUrl);
+
+    } else {
+        console.log('Match time reached! Starting High Quality YouTube HD Stream...');
+        
+        // 7.10 පසුව ඔරිජිනල් HD ලයිව් ස්ට්‍රීම් එක පටන් ගැනීම
+        command = ffmpeg(streamUrl)
+            .inputOptions([
+                '-reconnect 1',
+                '-reconnect_streamed 1',
+                '-reconnect_delay_max 5',
+                '-fflags +discardcorrupt+genpts',
+                '-probesize 20M',
+                '-analyzeduration 10M'
+            ])
+            .outputOptions([
+                '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
+                '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-tune', 'zerolatency',
+                '-fps_mode', 'cfr',
+                '-g', '60',
+                '-b:v', '1800k',
+                '-maxrate', '2200k',
+                '-bufsize', '3600k',
+                '-pix_fmt', 'yuv420p',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-ar', '44100',
+                '-ac', '2',
+                '-max_muxing_queue_size', '99999',
+                '-f', 'flv'
+            ])
+            .output(ytRtmpUrl);
+    }
+
+    command.on('start', (commandLine) => {
+        console.log('FFmpeg Stream spawned:', commandLine);
+    })
+    .on('error', (err) => {
+        console.error('YouTube Streaming error:', err.message);
+        activeStreamProcess = null;
+    })
+    .on('end', () => {
+        console.log('YouTube Streaming finished.');
+        activeStreamProcess = null;
+    });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>High Quality HD Live started successfully! 🚀</h2>');
+    res.send('<h2>Smart Time-based HD Live started successfully! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
