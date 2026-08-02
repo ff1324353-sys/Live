@@ -1,4 +1,4 @@
-const express = require('express');
+Const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 const http = require('http');
@@ -56,98 +56,76 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට ටයිමර් එකත් සමඟ HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
-app.post('/start-yt-live', (req, res) => {
-    const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
-    const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-4";
+// ෆේස්බුක් එකට සර්වර් එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
+app.post('/start-fb-live', (req, res) => {
+    const streamKey = req.body.streamKey;
+    
+    // ඔයා දුන් .m3u8 ලින්ක් එක
+    const streamUrl = "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8?nocache=1783826412104";
+
+    if (!streamKey) {
+        return res.status(400).send('Stream Key required!');
+    }
 
     if (activeStreamProcess) {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
+    const fbRtmpUrl = `rtmps://live-api-s.facebook.com:443/rtmp/${streamKey}`;
 
-    // ශ්‍රී ලංකා වෙලාව (GMT+5:30) ලබා ගැනීම
-    const now = new Date();
-    const lkTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
-    const currentHours = lkTime.getHours();
-    const currentMinutes = lkTime.getMinutes();
+    console.log('Starting Deep-Filtered Anti-Copyright Stream:', streamUrl);
 
-    // මැච් පටන් ගන්න වෙලාව: සවස 7.10 (පැය 19, මිනිත්තු 10)
-    const targetHours = 19;
-    const targetMinutes = 10;
+    const command = ffmpeg(streamUrl)
+        .inputOptions([
+            '-reconnect 1',
+            '-reconnect_streamed 1',
+            '-reconnect_delay_max 5',
+            '-fflags +discardcorrupt+genpts',
+            '-probesize 15M',
+            '-analyzeduration 5M'
+        ])
+                .outputOptions([
+            // 1. ප්‍රබල වීඩියෝ ෆිල්ටර්: 25 FPS, පාට සහ සැטורේෂන් මඳක් මාරු කිරීම, කුඩා නොයිස් එකක් සහ කළු බොක්ස් එක
+            '-vf', 'fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,eq=saturation=1.15:brightness=0.02,noise=alls=8:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill',
+            
+            // 2. ශබ්දය කොපිරයිට් බොට් එකට මැච් නොවීමට Equalizer (treble/bass) මඟින් සරලව වෙනස් කිරීම
+            '-af', 'treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0',
 
-    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const targetTimeInMinutes = targetHours * 60 + targetMinutes;
+            // 3. Bitrate එක 800k දක්වා අඩු කර ස්ථාවරව දිගු වේලාවක් දුවන්න සැකසූ කෝඩින්ග් සෙටින්ග්ස්
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'zerolatency',
+            '-fps_mode', 'cfr',
+            '-g', '50',
+            '-b:v', '1500k',        // බිට්රේට් එක 800k දක්වා අඩු කර ඇත (ලැග් වීම සම්පූර්ණයෙන්ම වළක්වයි)
+            '-maxrate', '2000k',
+            '-bufsize', '3000k',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
+            '-max_muxing_queue_size', '99999',
+            '-f', 'flv'
+        ])
 
-    let command;
-
-    if (currentTimeInMinutes < targetTimeInMinutes) {
-        console.log('Match time not reached yet. Starting Standby Screen with Text...');
-        
-        // 7.10 වෙනතුරු කළු ස්ක්‍රීන් එකක් මත "LPL MATCH START 7.10 P.M" පෙන්නන ෆිල්ටර් එක
-        command = ffmpeg('color=c=black:s=1280x720:r=25')
-            .inputFormat('lavfi')
-            .outputOptions([
-                '-vf', 'drawtext=text=\'LPL MATCH START 7.10 P.M\':fontcolor=white:fontsize=50:x=(w-text_w)/2:y=(h-text_h)/2',
-                '-c:v', 'libx264',
-                '-preset', 'ultrafast',
-                '-pix_fmt', 'yuv420p',
-                '-f', 'flv'
-            ])
-            .output(ytRtmpUrl);
-
-    } else {
-        console.log('Match time reached! Starting High Quality YouTube HD Stream...');
-        
-        // 7.10 පසුව ඔරිජිනල් HD ලයිව් ස්ට්‍රීම් එක පටන් ගැනීම
-        command = ffmpeg(streamUrl)
-            .inputOptions([
-                '-reconnect 1',
-                '-reconnect_streamed 1',
-                '-reconnect_delay_max 5',
-                '-fflags +discardcorrupt+genpts',
-                '-probesize 20M',
-                '-analyzeduration 10M'
-            ])
-            .outputOptions([
-                '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
-                '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
-                '-c:v', 'libx264',
-                '-preset', 'veryfast',
-                '-tune', 'zerolatency',
-                '-fps_mode', 'cfr',
-                '-g', '60',
-                '-b:v', '1800k',
-                '-maxrate', '2200k',
-                '-bufsize', '3600k',
-                '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac',
-                '-b:a', '128k',
-                '-ar', '44100',
-                '-ac', '2',
-                '-max_muxing_queue_size', '99999',
-                '-f', 'flv'
-            ])
-            .output(ytRtmpUrl);
-    }
-
-    command.on('start', (commandLine) => {
-        console.log('FFmpeg Stream spawned:', commandLine);
-    })
-    .on('error', (err) => {
-        console.error('YouTube Streaming error:', err.message);
-        activeStreamProcess = null;
-    })
-    .on('end', () => {
-        console.log('YouTube Streaming finished.');
-        activeStreamProcess = null;
-    });
+        .output(fbRtmpUrl)
+        .on('start', (commandLine) => {
+            console.log('FFmpeg spawned:', commandLine);
+        })
+        .on('error', (err) => {
+            console.error('Streaming error:', err.message);
+            activeStreamProcess = null;
+        })
+        .on('end', () => {
+            console.log('Streaming finished.');
+            activeStreamProcess = null;
+        });
 
     command.run();
     activeStreamProcess = command;
 
-    res.send('<h2>Smart Time-based HD Live started successfully! 🚀</h2>');
+    res.send('<h2>Live started with Deep Anti-Copyright Shield! 🚀</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
@@ -174,3 +152,6 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+          
+
+Meke mata original sounds, video ena widiyata witharak update karana code Eka ewnan
