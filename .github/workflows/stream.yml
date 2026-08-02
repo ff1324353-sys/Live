@@ -1,32 +1,42 @@
-name: YouTube Live Streamer
+name: FB Live Streamer
 
 on:
-  workflow_dispatch: # අපිට ඕන වෙලාවකට Manual එකෙන් Run කරන්න පුළුවන් වෙන්න
+  workflow_dispatch: # GitHub ඩෑෂ්බෝඩ් එකෙන් Manual එකෙන් "Run workflow" ක්ලික් කරලා ලයිව් එක පටන් ගන්න
 
 jobs:
   stream:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Start Live Stream to YouTube
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Start Live Stream
         env:
-          YT_KEY: ${{ secrets.YT_KEY }}
+          PORT: 3000
         run: |
-          echo "Starting FFmpeg Live Stream..."
+          # සර්වර් එක බැක්ග්‍රවුන්ඩ් එකේ රන් වෙන්න හැදීම
+          node server.js &
           
-          ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-          -fflags +discardcorrupt+genpts -probesize 15M -analyzeduration 5M \
-          -i "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8" \
-          -vf "fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,eq=saturation=1.15:brightness=0.02,noise=alls=8:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill" \
-          -af "treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0" \
-          -c:v libx264 -preset ultrafast -tune zerolatency -fps_mode cfr -g 50 \
-          -b:v 700k -maxrate 700k -bufsize 1400k -pix_fmt yuv420p \
-          -c:a aac -b:a 96k -ar 44100 -ac 2 -max_muxing_queue_size 99999 \
-          -f flv "rtmp://a.rtmp.youtube.com/live2/$YT_KEY"
+          # සර්වර් එක ස්ටාර්ට් වෙන්න තත්පර 5ක් ඉඳලා ලයිව් රෝස් එකට රික්වෙස්ට් එක යැවීම (අවශ්‍ය නම් ස්ක්‍රිප්ට් එකෙන්ම ඔටෝ පටන් ගන්න හැදීමට)
+          sleep 5
+          
+          # ලයිව් ස්ටාර්ට් රූට් එකට හිස් රික්වෙස්ට් එකක් හෝ ස්ට්‍රීම් කී එක සෙට් කරලා යැවීම
+          # (මෙතැනදී ඔයාගේ ෆේස්බුක් ස්ට්‍රීම් කී එක GitHub Secrets වල දාලා මෙතැනට දෙන්න පුළුවන්)
+          curl -X POST http://localhost:3000/start-fb-live \
+            -H "Content-Type: application/json" \
+            -d '{"streamKey": "${{ secrets.FB_STREAM_KEY }}"}'
+          
+          # ලයිව් එක දිගටම ඩුවන්න කල් දීම (GitHub Actions වල මැක්සිමම් පැය 6ක් දුවන්න පුළුවන්)
+          sleep 21600
