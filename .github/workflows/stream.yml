@@ -21,7 +21,10 @@ jobs:
         run: |
           echo "Starting Advanced FFmpeg Live Stream..."
           
-          ffmpeg -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+          ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+          -multiple_requests 1 \
+          -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+          -rw_timeout 20000000 \
           -fflags +discardcorrupt+genpts -probesize 100M -analyzeduration 50M \
           -i "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8" \
           -vf "scale=1280:720,eq=saturation=1.12:contrast=1.18,\
@@ -30,7 +33,7 @@ jobs:
           drawbox=x=0:y=665:w=1280:h=40:color=black@0.7:t=fill,\
           drawtext=text='● LIVE CRICKET MATCH STREAMING - ENJOY THE GAME':fontcolor=white:fontsize=16:x='1280-mod(t*120\, 1600)':y=675" \
           -af "volume=0" \
-          -c:v libx264 -preset veryfast -tune zerolatency -fps_mode cfr -g 60 \
-          -b:v 2500k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p \
+          -c:v libx264 -preset veryfast -tune zerolatency -fps_mode cfr -g 50 \
+          -b:v 2200k -maxrate 2800k -bufsize 5000k -pix_fmt yuv420p \
           -c:a aac -b:a 128k -ar 44100 -ac 2 \
           -f flv "rtmp://a.rtmp.youtube.com/live2/$YT_KEY"
