@@ -21,9 +21,9 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          ffmpeg -fflags +genpts -re -i "http://tvsen5.aynascope.net/willowhd/index.m3u8" \
-          -vf "crop=iw-40:ih-40:20:20,drawbox=x=iw-200:y=20:w=180:h=60:color=black@0.9:t=fill,drawtext=text='SL vs PAK LIVE':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=36:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf,eq=brightness=0.04:contrast=1.08:saturation=1.2:gamma=1.05,setpts=PTS/1.03,scale=1280:720" \
-          -af "atempo=1.03,rubberband=pitch=1.02,equalizer=f=1000:width_type=h:width=200:g=-3,dynaudnorm" \
+          ffmpeg -fflags +genpts -re -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -i "http://tvsen5.aynascope.net/willowhd/index.m3u8" \
+          -vf "crop=iw-60:ih-60:30:30,pad=iw+20:ih+20:10:10:black,drawbox=x=iw-220:y=20:w=180:h=60:color=black@0.9:t=fill,drawtext=text='SL vs PAK LIVE':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=36:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf,eq=brightness=0.05:contrast=1.12:saturation=1.25:gamma=1.08,setpts=PTS/1.06,scale=1280:720" \
+          -af "atempo=1.06,rubberband=pitch=1.05,highpass=f=200,equalizer=f=1000:width_type=h:width=200:g=-4,dynaudnorm" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
