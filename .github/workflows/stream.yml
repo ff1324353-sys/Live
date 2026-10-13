@@ -23,9 +23,9 @@ jobs:
           echo "Starting Fixed Willow HD Stream to Facebook..."
           
           while true; do
-            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2 \
-            -hls_playlist_reload_error 10 \
+            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -rw_timeout 15000000 \
             -fflags +genpts+discardcorrupt \
             -i "$STREAM_URL" \
             -vf "hflip,scale=1280:720,eq=saturation=1.12:contrast=1.15,\
@@ -39,6 +39,6 @@ jobs:
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
             
-            echo "Stream re-indexing. Restarting connection in 2 seconds..."
-            sleep 2
+            echo "Stream disconnected or re-indexing. Restarting connection in 3 seconds..."
+            sleep 3
           done
