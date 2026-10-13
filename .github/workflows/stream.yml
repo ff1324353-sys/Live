@@ -1,4 +1,4 @@
-name: FB Live Streamer
+name: FB Live Streamer (Force Extract)
 
 on:
   workflow_dispatch:
@@ -15,35 +15,46 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Tools (FFmpeg & yt-dlp)
+      - name: Install Tools & Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg python3-pip
-          pip3 install -U --break-system-packages yt-dlp
+          pip3 install --break-system-packages -U yt-dlp
 
-      - name: Extract and Stream to Facebook Live
+      - name: Force Extract and Restream
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           FB_URL: ${{ github.event.inputs.fb_url }}
         run: |
-          echo "Facebook Link එකෙන් Video Stream එක ලබා ගැනීමට උත්සාහ කරයි..."
+          echo "Starting Force Extraction for FB Live Link..."
+          
+          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
           while true; do
-            # yt-dlp මගින් FB Link එකෙන් Direct Video Stream URL එක ලබා ගැනීම
-            STREAM_URL=$(yt-dlp -g --format "best[vcodec^=avc1]/best" "$FB_URL" 2>/dev/null || true)
+            # FB Link එකෙන් Live Formats Force කරලා Grab කිරීම
+            STREAM_URL=$(yt-dlp \
+              --user-agent "$USER_AGENT" \
+              --no-check-certificates \
+              --prefer-insecure \
+              --format "b/best/bestvideo+bestaudio" \
+              -g "$FB_URL" 2>/dev/null | head -n 1 || true)
             
             if [ -z "$STREAM_URL" ]; then
-              echo "Link එක Extraction Error එකක් ආවා හෝ Stream එක Active නැත. තත්පර 10කින් නැවත උත්සාහ කරයි..."
-              sleep 10
+              echo "Standard extraction failed. Retrying with raw extractor..."
+              STREAM_URL=$(yt-dlp --user-agent "$USER_AGENT" --force-generic-extractor -g "$FB_URL" 2>/dev/null | head -n 1 || true)
+            fi
+
+            if [ -z "$STREAM_URL" ]; then
+              echo "Link Extraction Error! Retrying in 5 seconds..."
+              sleep 5
               continue
             fi
 
-            echo "Stream URL එක ලැබුණා! Facebook එකට Stream වීම ආරම්භ වේ..."
+            echo "Stream Link FOUND! Streaming to Facebook Page..."
             
-            # FFmpeg හරහා ඔයාගේ Facebook Page එකට Re-stream කිරීම
-            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            # FFmpeg හරහා FB Page එකට Push කිරීම
+            ffmpeg -headers "User-Agent: $USER_AGENT" \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -rw_timeout 15000000 \
             -i "$STREAM_URL" \
             -vf "hflip,scale=1280:720,eq=saturation=1.12:contrast=1.18,\
             drawbox=x=0:y=665:w=1280:h=40:color=black@0.7:t=fill,\
@@ -53,6 +64,7 @@ jobs:
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
             
-            echo "Stream එක Disconnect වුණා. නැවත Reconnect වේ..."
+            echo "Disconnected. Restarting in 3 seconds..."
             sleep 3
           done
+          
