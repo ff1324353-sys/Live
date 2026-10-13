@@ -20,10 +20,10 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
           STREAM_URL: "http://tvsen5.aynascope.net/willowhd/index.m3u8"
         run: |
-          echo "Starting Fixed Willow HD Stream to Facebook..."
+          echo "Starting Willow HD Stream with Headers..."
           
           while true; do
-            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n'"Referer: http://tvsen5.aynascope.net/"$'\r\n' \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -rw_timeout 15000000 \
             -fflags +genpts+discardcorrupt \
@@ -39,6 +39,6 @@ jobs:
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
             
-            echo "Stream disconnected or re-indexing. Restarting connection in 3 seconds..."
+            echo "Stream disconnected. Restarting connection in 3 seconds..."
             sleep 3
           done
