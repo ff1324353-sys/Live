@@ -1,12 +1,7 @@
-name: FB Live Streamer (Force Extract)
+name: Willow HD Facebook Streamer
 
 on:
   workflow_dispatch:
-    inputs:
-      fb_url:
-        description: 'Facebook Live Video Link එක මෙතනට Paste කරන්න'
-        required: true
-        default: ''
 
 jobs:
   stream:
@@ -15,56 +10,36 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Tools & Dependencies
+      - name: Install FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg python3-pip
-          pip3 install --break-system-packages -U yt-dlp
+          sudo apt-get install -y ffmpeg
 
-      - name: Force Extract and Restream
+      - name: Start Anti-Copyright Live Stream to Facebook
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          FB_URL: ${{ github.event.inputs.fb_url }}
+          STREAM_URL: "http://tvsen5.aynascope.net/willowhd/index.m3u8"
         run: |
-          echo "Starting Force Extraction for FB Live Link..."
-          
-          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          echo "Starting Willow HD Stream to Facebook..."
           
           while true; do
-            # FB Link එකෙන් Live Formats Force කරලා Grab කිරීම
-            STREAM_URL=$(yt-dlp \
-              --user-agent "$USER_AGENT" \
-              --no-check-certificates \
-              --prefer-insecure \
-              --format "b/best/bestvideo+bestaudio" \
-              -g "$FB_URL" 2>/dev/null | head -n 1 || true)
-            
-            if [ -z "$STREAM_URL" ]; then
-              echo "Standard extraction failed. Retrying with raw extractor..."
-              STREAM_URL=$(yt-dlp --user-agent "$USER_AGENT" --force-generic-extractor -g "$FB_URL" 2>/dev/null | head -n 1 || true)
-            fi
-
-            if [ -z "$STREAM_URL" ]; then
-              echo "Link Extraction Error! Retrying in 5 seconds..."
-              sleep 5
-              continue
-            fi
-
-            echo "Stream Link FOUND! Streaming to Facebook Page..."
-            
-            # FFmpeg හරහා FB Page එකට Push කිරීම
-            ffmpeg -headers "User-Agent: $USER_AGENT" \
+            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            -multiple_requests 1 \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -rw_timeout 15000000 \
+            -fflags +discardcorrupt+genpts -probesize 50M -analyzeduration 20M \
             -i "$STREAM_URL" \
-            -vf "hflip,scale=1280:720,eq=saturation=1.12:contrast=1.18,\
-            drawbox=x=0:y=665:w=1280:h=40:color=black@0.7:t=fill,\
-            drawtext=text='● LIVE MATCH STREAMING':fontcolor=white:fontsize=16:x='1280-mod(t*120\, 1600)':y=675" \
-            -c:v libx264 -preset veryfast -tune zerolatency -g 50 \
+            -vf "hflip,scale=1280:720,eq=saturation=1.12:contrast=1.15,\
+            drawbox=x=980:y=15:w=280:h=100:color=black@0.98:t=fill,\
+            drawtext=text='LIVE MATCH':fontcolor=yellow:fontsize=20:x=1020:y=50,\
+            drawbox=x=0:y=665:w=1280:h=40:color=black@0.75:t=fill,\
+            drawtext=text='● LIVE CRICKET MATCH STREAMING - FOLLOW FOR MORE':fontcolor=white:fontsize=16:x='1280-mod(t*120\, 1600)':y=675" \
+            -af "asetrate=44100*1.04,aresample=44100,atempo=1/1.04" \
+            -c:v libx264 -preset veryfast -tune zerolatency -fps_mode cfr -g 50 \
             -b:v 2200k -maxrate 2800k -bufsize 5000k -pix_fmt yuv420p \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
             
-            echo "Disconnected. Restarting in 3 seconds..."
+            echo "Stream disconnected. Restarting in 3 seconds..."
             sleep 3
           done
-          
