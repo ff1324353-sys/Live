@@ -19,8 +19,8 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          ffmpeg -fflags +genpts -re -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -i "http://tvsen5.aynascope.net/willowhd/index.m3u8" \
-          -filter_complex "[0:v]crop=iw:ih-50:0:50,eq=brightness=0.06:contrast=1.15:saturation=1.3:gamma=1.1,setpts=PTS/1.07,scale=1280:720[main];[main]split[bg][fg];[bg]scale=1280:720,boxblur=20:10[blurred];[fg]scale=1100:618[small];[blurred][small]overlay=(W-w)/2:(H-h)/2[vout];[0:a]atempo=1.07,rubberband=pitch=1.07,highpass=f=250,lowpass=f=3800,volume=0.9,stereowiden=delay=20:feedback=0.3[aout]" \
+          ffmpeg -y -fflags +genpts -re -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -i "http://tvsen5.aynascope.net/willowhd/index.m3u8" \
+          -filter_complex "[0:v]crop=iw:ih-50:0:50,eq=brightness=0.06:contrast=1.15:saturation=1.3:gamma=1.1,setpts=PTS/1.07,scale=1280:720[main];[main]split[bg][fg];[bg]scale=1280:720,boxblur=20:10[blurred];[fg]scale=1100:618[small];[blurred][small]overlay=(W-w)/2:(H-h)/2[base];color=color=black@0.9:size=180x60[box];[base][box]overlay=x='500 + (W-680)*abs(sin(t*0.4))':y='10 + (H-600)*abs(cos(t*0.3))'[vout];[0:a]atempo=1.07,rubberband=pitch=1.07,highpass=f=250,lowpass=f=3800,volume=0.9,stereowiden=delay=20:feedback=0.3[aout]" \
           -map "[vout]" -map "[aout]" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2300k -maxrate 2300k -bufsize 4600k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
