@@ -18,7 +18,7 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.facebook.com/khel.np9/videos/27506206312389280/"
+          TARGET_URL: "https://www.facebook.com/Reuters/videos/3242255905959195/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
