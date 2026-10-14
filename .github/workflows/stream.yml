@@ -1,4 +1,4 @@
-name: FB Live VPN Stream Fixed
+name: Willow HD Anti-Copyright Streamer
 
 on:
   workflow_dispatch:
@@ -10,143 +10,36 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Virtual Display, Browser, OpenVPN & FFmpeg
+      - name: Install FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip openvpn curl
-          pip3 install websocket-client
+          sudo apt-get install -y ffmpeg
 
-      - name: Connect to Free VPN (Fast Timeout & Fallback)
-        run: |
-          echo "Fetching free OpenVPN servers from VPN Gate..."
-          if curl -s --max-time 8 "https://www.vpngate.net/api/iphone/" > vpngate.csv && [ -s vpngate.csv ]; then
-            
-            # Write python script safely to a file to avoid syntax/heredoc errors
-            cat << 'EOF' > vpn_fetch.py
-            import base64, subprocess, time, os
-            try:
-                with open("vpngate.csv", "r", encoding="latin-1") as f:
-                    lines = f.readlines()
-                
-                for idx, line in enumerate(lines[2:]):
-                    parts = line.strip().split(",")
-                    if len(parts) > 14:
-                        b64_data = parts[14].strip()
-                        if b64_data:
-                            try:
-                                missing_padding = len(b64_data) % 4
-                                if missing_padding:
-                                    b64_data += '=' * (4 - missing_padding)
-                                decoded = base64.b64decode(b64_data).decode("utf-8", errors="ignore")
-                                if "client" in decoded and "dev tun" in decoded:
-                                    with open("vpn.ovpn", "w") as out:
-                                        out.write(decoded)
-                                    
-                                    print(f"Trying VPN server #{idx}...")
-                                    proc = subprocess.Popen(["sudo", "openvpn", "--config", "vpn.ovpn", "--auth-nocache"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                    
-                                    connected = False
-                                    for _ in range(6):
-                                        time.sleep(1)
-                                        if os.path.exists("/sys/class/net/tun0"):
-                                            connected = True
-                                            break
-                                    if connected:
-                                        print("VPN Connected successfully!")
-                                        exit(0)
-                                    else:
-                                        proc.terminate()
-                                        subprocess.run(["sudo", "killall", "openvpn"], stderr=subprocess.DEVNULL)
-                            except Exception:
-                                continue
-            except Exception:
-                pass
-            print("VPN connection skipped/failed, moving forward...")
-            exit(0)
-            EOF
-            
-            python3 vpn_fetch.py || true
-          else
-            echo "VPN list fetch timed out or failed. Proceeding directly..."
-          fi
-          
-          echo "Current Public IP:"
-          curl --max-time 4 ifconfig.me || true
-          echo ""
-
-      - name: Start Live Stream Setup
+      - name: Start Protected Live Stream to Facebook
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.facebook.com/61552326955433/videos/1423723569156045/"
+          STREAM_URL: "http://tvsen5.aynascope.net/willowhd/index.m3u8"
         run: |
-          # 1. Start Virtual Display & PulseAudio
-          Xvfb :99 -screen 0 1280x720x24 &
-          export DISPLAY=:99
-          pulseaudio -D --exit-idle-time=-1
-          sleep 3
-
-          # 2. Launch Chromium with the target URL
-          chromium-browser \
-            --no-sandbox \
-            --disable-setuid-sandbox \
-            --no-first-run \
-            --no-default-browser-check \
-            --disable-infobars \
-            --disable-session-crashed-bubble \
-            --autoplay-policy=no-user-gesture-required \
-            --mute-audio=false \
-            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            --remote-debugging-port=9222 \
-            --remote-allow-origins=* \
-            --disable-dev-shm-usage \
-            --start-fullscreen \
-            --kiosk "${TARGET_URL}" &
+          echo "Starting Anti-Copyright Willow HD Stream..."
           
-          # Wait for page load and clear blocks
-          sleep 12
-          xdotool key Escape
-          sleep 2
+          while true; do
+            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n'"Referer: http://tvsen5.aynascope.net/"$'\r\n' \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -rw_timeout 15000000 \
+            -fflags +genpts+discardcorrupt \
+            -i "$STREAM_URL" \
+            -vf "hflip,scale=1280:720,eq=saturation=1.18:contrast=1.20:brightness=0.03,\
+            drawbox=x=970:y=10:w=300:h=110:color=black@0.99:t=fill,\
+            drawtext=text='LIVE MATCH':fontcolor=yellow:fontsize=22:x=1010:y=50,\
+            drawbox=x=0:y=655:w=1280:h=50:color=black@0.8:t=fill,\
+            drawtext=text='● EXCLUSIVE LIVE MATCH STREAMING - PLEASE FOLLOW':fontcolor=white:fontsize=16:x='1280-mod(t*120\, 1700)':y=670" \
+            -af "asetrate=44100*1.05,aresample=44100,atempo=1/1.05" \
+            -c:v libx264 -preset veryfast -tune zerolatency -g 50 \
+            -b:v 2200k -maxrate 2800k -bufsize 5000k -pix_fmt yuv420p \
+            -c:a aac -b:a 128k -ar 44100 -ac 2 \
+            -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
+            
+            echo "Stream disconnected. Restarting connection in 3 seconds..."
+            sleep 3
+          done
           
-          # 3. Inject JavaScript to remove login blocks and play/unmute video
-          python3 -c '
-          import urllib.request, json, time, websocket
-          time.sleep(3)
-          try:
-              response = urllib.request.urlopen("http://localhost:9222/json")
-              targets = json.loads(response.read().decode())
-              ws_url = None
-              for t in targets:
-                  if "facebook.com" in t.get("url", ""):
-                      ws_url = t.get("webSocketDebuggerUrl")
-                      break
-              if ws_url:
-                  ws = websocket.create_connection(ws_url)
-                  js_code = """
-                  const overlays = document.querySelectorAll("div[role=\\x27dialog\\x27], div[data-testid=\\x27royal_login_form\\x27]");
-                  overlays.forEach(el => el.remove());
-                  
-                  document.querySelectorAll("video").forEach(v => {
-                      v.muted = false;
-                      v.volume = 1.0;
-                      v.play().catch(err => console.log(err));
-                  });
-                  """
-                  msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
-                  ws.send(msg)
-                  ws.close()
-                  print("JS unmuted successfully!")
-          except Exception as e:
-              print("JS error:", e)
-          ' || true
-
-          sleep 4
-
-          # 4. Capture Screen & PulseAudio Stream (Original Size & Crop)
-          ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f pulse -i default \
-          -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
-          -map "[vout]" -map "[aout]" \
-          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
-          -max_interleave_delta 0 \
-          -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
