@@ -20,7 +20,7 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
-          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/"
+          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
           echo "$FB_COOKIES" > cookies.txt
 
