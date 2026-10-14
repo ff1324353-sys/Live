@@ -13,7 +13,7 @@ jobs:
       - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool
 
       - name: Start Live Stream Setup
         env:
@@ -25,7 +25,7 @@ jobs:
           export DISPLAY=:99
           sleep 3
 
-          # 2. Launch Chromium and auto-remove login dialogs using JS/CSS injection flags
+          # 2. Launch Chromium in Kiosk mode
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -38,18 +38,14 @@ jobs:
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Browser එක Load වී Login Dialog එක එන තෙක් තත්පර 5ක් ඉඳලා, ඒක Close කරන්න Key event එකක් යැවීම (Press Escape key via xdotool)
-          sleep 5
-          sudo apt-get install -y xdotool
+          sleep 6
           xdotool key Escape
-          
-          # තවත් ටිකක් වෙලා Wait කිරීම
-          sleep 7
+          sleep 6
 
-          # 3. Capture Virtual Screen & Audio, apply filters and stream to FB Live
+          # 3. Capture, Crop Video Player area, apply filters and stream
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-          -filter_complex "[0:v]eq=brightness=0.05:contrast=1.12:saturation=1.2,scale=1280:720,drawtext=text='TEST STREAM LIVE':x='(w-text_w)/2+80*sin(t)':y='(h-text_h)/2+40*cos(t)':fontsize=28:fontcolor=white@0.5:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
+          -filter_complex "[0:v]crop=1200:540:40:80,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
           -map "[vout]" -map 1:a \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
