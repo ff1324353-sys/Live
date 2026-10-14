@@ -1,4 +1,4 @@
-name: FB Live Sound & Crop Perfect Final
+name: FB Live Sound Fixed Final
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.facebook.com/Reuters/videos/3242255905959195/?mibextid=rS40aB7S9Ucbxw6v"
+          TARGET_URL: "https://www.facebook.com/khel.np9/videos/27506206312389280/https://www.facebook.com/Reuters/videos/3242255905959195/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -26,7 +26,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium in Kiosk mode with Unmute Flags
+          # 2. Launch Chromium with Force-Unmute Audio Flags
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -35,6 +35,7 @@ jobs:
             --disable-infobars \
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
+            --mute-audio=false \
             --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies \
             --disable-dev-shm-usage \
             --start-fullscreen \
@@ -45,17 +46,22 @@ jobs:
           xdotool key Escape
           sleep 2
           
-          # 1st Click on Player Center to focus
-          xdotool mousemove 400 300 click 1
+          # 1. Click center of player to active focus
+          xdotool mousemove 500 350 click 1
           sleep 1
           
-          # 2nd Click specifically on the Bottom-Right Mute Icon area (x:760, y:540)
-          xdotool mousemove 760 540 click 1
+          # 2. Multiple clicks near Mute Icon area (Bottom Right of player)
+          xdotool mousemove 780 500 click 1
+          sleep 0.5
+          xdotool mousemove 780 520 click 1
+          sleep 0.5
+          xdotool mousemove 750 500 click 1
           sleep 1
           
-          # Press 'm' key and 'Up Arrow' to boost volume
+          # 3. Press Unmute shortcuts ('m' and 'Up Arrow' for Volume)
           xdotool key m
           sleep 1
+          xdotool key Up
           xdotool key Up
           xdotool key Up
           sleep 2
@@ -69,4 +75,3 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
