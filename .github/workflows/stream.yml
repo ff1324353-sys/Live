@@ -1,4 +1,4 @@
-name: FB Live Sound Fixed Final
+name: FB Live VPN Stream Fixed
 
 on:
   workflow_dispatch:
@@ -10,29 +10,45 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Virtual Display, Browser & FFmpeg
+      - name: Install Virtual Display, Browser, OpenVPN & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip openvpn curl
           pip3 install websocket-client
+
+      - name: Connect to Free VPN (Auto Region / Asia)
+        run: |
+          # 1. Grab a free public OpenVPN config from VPN Gate (targeting non-US / Asian or stable regions)
+          echo "Fetching free OpenVPN server..."
+          curl -s "https://www.vpngate.net/api/iphone/" > vpngate.csv
+          
+          # Pick a stable server line (skipping headers)
+          SERVER_IP=$(awk -F',' 'NR>2 {print $2}' vpngate.csv | head -n 1)
+          CONFIG_B64=$(awk -F',' 'NR>2 {print $15}' vpngate.csv | head -n 1)
+          
+          if [ -n "$CONFIG_B64" ]; then
+            echo "$CONFIG_B64" | base64 -d > vpn.ovpn
+            echo "Starting OpenVPN connection..."
+            sudo openvpn --config vpn.ovpn --daemon vpn_conn
+            sleep 10
+            echo "Checking new public IP..."
+            curl ifconfig.me || true
+          else
+            echo "VPN config fetch failed, proceeding with default..."
+          fi
 
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
-          # 1. Set the user-provided proxy directly
-          SELECTED_PROXY="45.194.90.225:8080"
-          PROXY_ARG="--proxy-server=http://$SELECTED_PROXY"
-          echo "Using User-Provided Proxy: $SELECTED_PROXY"
-
-          # 2. Start Virtual Display & PulseAudio
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 3. Launch Chromium with the specified proxy
+          # 2. Launch Chromium through the VPN connection
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -42,21 +58,21 @@ jobs:
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
-            $PROXY_ARG \
+            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Wait for page load and skip login dialogs
+          # Wait for page load and clear blocks
           sleep 12
           xdotool key Escape
           sleep 2
           
-          # 4. Inject JavaScript directly into Chromium to find the video element and UNMUTE it!
+          # 3. Inject JavaScript to remove login blocks and play/unmute video
           python3 -c '
-          import urllib.request, json, time, urllib.error
+          import urllib.request, json, time, websocket
           time.sleep(3)
           try:
               response = urllib.request.urlopen("http://localhost:9222/json")
@@ -67,28 +83,30 @@ jobs:
                       ws_url = t.get("webSocketDebuggerUrl")
                       break
               if ws_url:
-                  import websocket
                   ws = websocket.create_connection(ws_url)
                   js_code = """
+                  // Remove login dialogs and restricted overlays
+                  const overlays = document.querySelectorAll("div[role=\x27dialog\x27], div[data-testid=\x27royal_login_form\x27]");
+                  overlays.forEach(el => el.remove());
+                  
+                  // Force play and unmute all video streams
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
-                      v.play();
+                      v.play().catch(err => console.log(err));
                   });
-                  const muteBtn = document.querySelector("div[aria-label*=\"Mute\"], div[aria-label*=\"Unmute\"]");
-                  if(muteBtn) muteBtn.click();
                   """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("JS Unmute executed successfully!")
+                  print("JS unmuted successfully!")
           except Exception as e:
-              print("JS Injection note:", e)
+              print("JS error:", e)
           ' || true
 
-          sleep 3
+          sleep 4
 
-          # 5. Capture Screen & PulseAudio Stream (Original Size & Crop)
+          # 4. Capture Screen & PulseAudio Stream (Original Size & Crop)
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
