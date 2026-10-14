@@ -18,23 +18,48 @@ jobs:
 
       - name: Connect to Free VPN (Auto Region / Asia)
         run: |
-          # 1. Grab a free public OpenVPN config from VPN Gate (targeting non-US / Asian or stable regions)
-          echo "Fetching free OpenVPN server..."
+          echo "Fetching free OpenVPN server from VPN Gate..."
           curl -s "https://www.vpngate.net/api/iphone/" > vpngate.csv
           
-          # Pick a stable server line (skipping headers)
-          SERVER_IP=$(awk -F',' 'NR>2 {print $2}' vpngate.csv | head -n 1)
-          CONFIG_B64=$(awk -F',' 'NR>2 {print $15}' vpngate.csv | head -n 1)
+          # Get the first working OpenVPN TCP/UDP config payload securely
+          # VPN Gate column 15 contains base64 ovpn config
+          PYTHON_SCRIPT=$(cat << 'EOF'
+          import base64
+          with open("vpngate.csv", "r", encoding="latin-1") as f:
+              lines = f.readlines()
+          for line in lines[2:]:
+              parts = line.strip().split(",")
+              if len(parts) > 14:
+                  b64_data = parts[14].strip()
+                  if b64_data:
+                      try:
+                          # Fix padding for base64 decode if needed
+                          missing_padding = len(b64_data) % 4
+                          if missing_padding:
+                              b64_data += '=' * (4 - missing_padding)
+                          decoded = base64.b64decode(b64_data).decode("utf-8", errors="ignore")
+                          if "client" in decoded and "dev tun" in decoded:
+                              with open("vpn.ovpn", "w") as out:
+                                  out.write(decoded)
+                              print("Successfully extracted VPN config!")
+                              exit(0)
+                      except Exception as e:
+                          continue
+          print("Failed to extract config")
+          exit(1)
+          EOF
+          )
           
-          if [ -n "$CONFIG_B64" ]; then
-            echo "$CONFIG_B64" | base64 -d > vpn.ovpn
+          python3 -c "$PYTHON_SCRIPT"
+          
+          if [ -f vpn.ovpn ]; then
             echo "Starting OpenVPN connection..."
             sudo openvpn --config vpn.ovpn --daemon vpn_conn
             sleep 10
             echo "Checking new public IP..."
             curl ifconfig.me || true
           else
-            echo "VPN config fetch failed, proceeding with default..."
+            echo "VPN config extraction failed, proceeding without VPN..."
           fi
 
       - name: Start Live Stream Setup
@@ -86,7 +111,7 @@ jobs:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
                   // Remove login dialogs and restricted overlays
-                  const overlays = document.querySelectorAll("div[role=\x27dialog\x27], div[data-testid=\x27royal_login_form\x27]");
+                  const overlays = document.querySelectorAll("div[role=\\x27dialog\\x27], div[data-testid=\\x27royal_login_form\\x27]");
                   overlays.forEach(el => el.remove());
                   
                   // Force play and unmute all video streams
@@ -115,4 +140,3 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
