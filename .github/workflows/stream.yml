@@ -1,4 +1,4 @@
-name: FB Live Direct Proxy Stream
+name: FB Live Sound Fixed Final
 
 on:
   workflow_dispatch:
@@ -10,31 +10,30 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils python3-pip
-          pip3 install websocket-client requests
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip tor
+          pip3 install websocket-client
 
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          FB_COOKIES: ${{ secrets.FB_COOKIES }}
           TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
-          echo "$FB_COOKIES" > cookies.txt
+          # 1. Start Tor service locally on the runner to bypass geo-restrictions cleanly
+          sudo systemctl start tor
+          echo "Waiting for Tor connection..."
+          sleep 5
 
-          # 1. Start Virtual Display & PulseAudio
+          # 2. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Hardcoded Sri Lanka Proxy Setup
-          PROXY_ARG="--proxy-server=http://203.143.24.17:8080"
-          echo "Using Hardcoded Sri Lanka Proxy: 203.143.24.17:8080"
-
-          # 3. Launch Chromium with proxy and allowed origins
+          # 3. Launch Chromium routed through local Tor SOCKS proxy (localhost:9050)
+          # This completely avoids dead public proxies and bypasses country blocks!
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -44,22 +43,24 @@ jobs:
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
-            $PROXY_ARG \
+            --proxy-server="socks5://127.0.0.1:9050" \
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          sleep 10
+          # Wait for page load and skip login dialogs
+          sleep 12
           xdotool key Escape
           sleep 2
-
-          # 4. Inject JS to Unmute Video Automatically (Clean EOF block)
-          python3 - << 'EOF'
-          import urllib.request, json, time, websocket
-          time.sleep(2)
+          
+          # 4. Inject JavaScript directly into Chromium to find the video element and UNMUTE it!
+          python3 -c '
+          import urllib.request, json, time, urllib.error
+          time.sleep(3)
           try:
+              # Get browser websocket debugger target
               response = urllib.request.urlopen("http://localhost:9222/json")
               targets = json.loads(response.read().decode())
               ws_url = None
@@ -68,18 +69,30 @@ jobs:
                       ws_url = t.get("webSocketDebuggerUrl")
                       break
               if ws_url:
+                  import websocket
                   ws = websocket.create_connection(ws_url)
-                  js_code = 'document.querySelectorAll("video").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });'
+                  # JS code to unmute all video/audio tags and set volume to max
+                  js_code = """
+                  document.querySelectorAll("video").forEach(v => {
+                      v.muted = false;
+                      v.volume = 1.0;
+                      v.play();
+                  });
+                  // Also click any mute buttons if present
+                  const muteBtn = document.querySelector("div[aria-label*=\"Mute\"], div[aria-label*=\"Unmute\"]");
+                  if(muteBtn) muteBtn.click();
+                  """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
+                  print("JS Unmute executed successfully!")
           except Exception as e:
-              print("JS error:", e)
-          EOF
+              print("JS Injection note:", e)
+          ' || true
 
           sleep 3
 
-          # 5. Stream using Original Crop & Fullscreen settings
+          # 5. Capture Screen & PulseAudio Stream (Original Size & Crop)
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
