@@ -42,12 +42,13 @@ jobs:
           xdotool key Escape
           sleep 6
 
-          # 3. Capture, Crop Video Player area, apply filters and stream
+          # 3. Capture Left-side Video Player, Crop sidebar & scale to HD fullscreen
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-          -filter_complex "[0:v]crop=1200:540:40:80,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
+          -filter_complex "[0:v]crop=820:500:20:90,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
           -map "[vout]" -map 1:a \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
