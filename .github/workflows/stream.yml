@@ -1,4 +1,4 @@
-name: FB Live Video Sound Fixed Final
+name: FB Live Sound & Crop Perfect Final
 
 on:
   workflow_dispatch:
@@ -20,15 +20,13 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.facebook.com/Reuters/videos/3242255905959195/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
-          # 1. Start Virtual Display & PulseAudio Virtual Output
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
-          pacmd load-module module-virtual-sink sink_name=vsnk
-          pacmd set-default-sink vsnk
           sleep 3
 
-          # 2. Launch Chromium with Forced Unmute & Autoplay flags
+          # 2. Launch Chromium in Kiosk mode with Unmute Flags
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -37,7 +35,7 @@ jobs:
             --disable-infobars \
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
-            --no-silent-debugger \
+            --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
@@ -45,24 +43,30 @@ jobs:
           # Wait for page load and skip login dialogs
           sleep 8
           xdotool key Escape
-          sleep 3
+          sleep 2
           
-          # Unmute Video: Click player and send 'm' key multiple times
-          xdotool mousemove 420 320 click 1
+          # 1st Click on Player Center to focus
+          xdotool mousemove 400 300 click 1
           sleep 1
+          
+          # 2nd Click specifically on the Bottom-Right Mute Icon area (x:760, y:540)
+          xdotool mousemove 760 540 click 1
+          sleep 1
+          
+          # Press 'm' key and 'Up Arrow' to boost volume
           xdotool key m
           sleep 1
-          xdotool key m
-          sleep 1
-          xdotool key m
+          xdotool key Up
+          xdotool key Up
           sleep 2
 
           # 3. Capture Screen & PulseAudio Stream
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f pulse -i vsnk.monitor \
+          -f pulse -i default \
           -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
           -map "[vout]" -map "[aout]" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
