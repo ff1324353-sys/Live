@@ -20,7 +20,7 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
-          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
+          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/"
         run: |
           echo "$FB_COOKIES" > cookies.txt
 
@@ -53,7 +53,7 @@ jobs:
             echo "No proxy found, running direct."
           fi
 
-          # 3. Launch Chromium with dynamic proxy
+          # 3. Launch Chromium with dynamic proxy and allowed origins
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -65,6 +65,7 @@ jobs:
             --mute-audio=false \
             $PROXY_ARG \
             --remote-debugging-port=9222 \
+            --remote-allow-origins=* \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
@@ -73,9 +74,9 @@ jobs:
           xdotool key Escape
           sleep 2
 
-          # 4. Inject JS to Unmute Video Automatically
+          # 4. Inject JS to Unmute Video Automatically (Fixed syntax)
           python3 -c '
-          import urllib.request, json, time
+          import urllib.request, json, time, websocket
           time.sleep(2)
           try:
               response = urllib.request.urlopen("http://localhost:9222/json")
@@ -86,20 +87,13 @@ jobs:
                       ws_url = t.get("webSocketDebuggerUrl")
                       break
               if ws_url:
-                  import websocket
                   ws = websocket.create_connection(ws_url)
-                  js_code = """
-                  document.querySelectorAll("video").forEach(v => {
-                      v.muted = false;
-                      v.volume = 1.0;
-                      v.play();
-                  });
-                  """
+                  js_code = "document.querySelectorAll(\"video\").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });"
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
           except Exception as e:
-              print(e)
+              print("JS error:", e)
           ' || true
 
           sleep 3
@@ -107,5 +101,10 @@ jobs:
           # 5. Stream using Original Crop & Fullscreen settings
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
-          -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05
+          -filter_complex "[0:v]crop=790:420:18:135,scale=1280:720,drawbox=x=12:y=12:w=125:h=42:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
+          -map "[vout]" -map "[aout]" \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
+          -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
+          -max_interleave_delta 0 \
+          -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
           
