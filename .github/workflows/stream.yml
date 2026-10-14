@@ -1,4 +1,4 @@
-name: FB Live Auto Proxy Stream
+name: FB Live Direct Proxy Stream
 
 on:
   workflow_dispatch:
@@ -30,30 +30,11 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Python script to find a working Sri Lanka proxy or fallback to direct
-          PROXY_ARG=""
-          python3 -c '
-          import requests, os
-          try:
-              res = requests.get("https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&country=LK&timeout=10000&simplify=true", timeout=5)
-              if res.status_code == 200 and res.text.strip():
-                  proxies = res.text.strip().split("\r\n")
-                  if proxies:
-                      with open("proxy.txt", "w") as f:
-                          f.write(proxies[0])
-          except Exception as e:
-              print("Proxy fetch error:", e)
-          ' || true
+          # 2. Hardcoded Sri Lanka Proxy Setup
+          PROXY_ARG="--proxy-server=http://192.248.95.98:54126"
+          echo "Using Hardcoded Sri Lanka Proxy: 192.248.95.98:54126"
 
-          if [ -f proxy.txt ]; then
-            LK_PROXY=$(cat proxy.txt)
-            echo "Using Sri Lanka Proxy: $LK_PROXY"
-            PROXY_ARG="--proxy-server=http://$LK_PROXY"
-          else
-            echo "No proxy found, running direct."
-          fi
-
-          # 3. Launch Chromium with dynamic proxy and allowed origins
+          # 3. Launch Chromium with proxy and allowed origins
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -74,27 +55,27 @@ jobs:
           xdotool key Escape
           sleep 2
 
-          # 4. Inject JS to Unmute Video Automatically (Fixed syntax)
+          # 4. Inject JS to Unmute Video Automatically
           python3 -c '
-          import urllib.request, json, time, websocket
-          time.sleep(2)
-          try:
-              response = urllib.request.urlopen("http://localhost:9222/json")
-              targets = json.loads(response.read().decode())
-              ws_url = None
-              for t in targets:
-                  if "facebook.com" in t.get("url", ""):
-                      ws_url = t.get("webSocketDebuggerUrl")
-                      break
-              if ws_url:
-                  ws = websocket.create_connection(ws_url)
-                  js_code = "document.querySelectorAll(\"video\").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });"
-                  msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
-                  ws.send(msg)
-                  ws.close()
-          except Exception as e:
-              print("JS error:", e)
-          ' || true
+import urllib.request, json, time, websocket
+time.sleep(2)
+try:
+    response = urllib.request.urlopen("http://localhost:9222/json")
+    targets = json.loads(response.read().decode())
+    ws_url = None
+    for t in targets:
+        if "facebook.com" in t.get("url", ""):
+            ws_url = t.get("webSocketDebuggerUrl")
+            break
+    if ws_url:
+        ws = websocket.create_connection(ws_url)
+        js_code = "document.querySelectorAll(\"video\").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });"
+        msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
+        ws.send(msg)
+        ws.close()
+except Exception as e:
+    print("JS error:", e)
+' || true
 
           sleep 3
 
@@ -107,4 +88,3 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
