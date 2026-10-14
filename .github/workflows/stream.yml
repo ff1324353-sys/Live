@@ -18,7 +18,7 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          # Target Facebook Live Page URL:
+          # Target Page / Stream URL:
           TARGET_URL: "https://www.facebook.com/tvwanonline24/videos/1032528446511160/"
         run: |
           # 1. Start Virtual Display :99 (1280x720 24bit)
@@ -26,10 +26,15 @@ jobs:
           export DISPLAY=:99
           sleep 3
 
-          # 2. Launch Chromium with flags for Autoplay & Stability
+          # 2. Launch Chromium with flags to skip First-Run, Terms & Welcome Dialogs
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-infobars \
+            --disable-session-crashed-bubble \
+            --disable-features=Translate \
             --autoplay-policy=no-user-gesture-required \
             --disable-dev-shm-usage \
             --start-fullscreen \
@@ -47,4 +52,3 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
