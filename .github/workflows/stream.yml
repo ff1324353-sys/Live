@@ -16,16 +16,17 @@ jobs:
           sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip openvpn curl
           pip3 install websocket-client
 
-      - name: Connect to Free VPN (Auto Region / Asia)
+      - name: Connect to Free VPN (Auto Loop Working Server)
         run: |
-          echo "Fetching free OpenVPN server from VPN Gate..."
+          echo "Fetching free OpenVPN servers from VPN Gate..."
           curl -s "https://www.vpngate.net/api/iphone/" > vpngate.csv
           
           PYTHON_SCRIPT=$(cat << 'EOF'
-          import base64
+          import base64, subprocess, time, os
           with open("vpngate.csv", "r", encoding="latin-1") as f:
               lines = f.readlines()
-          for line in lines[2:]:
+          
+          for idx, line in enumerate(lines[2:]):
               parts = line.strip().split(",")
               if len(parts) > 14:
                   b64_data = parts[14].strip()
@@ -38,43 +39,39 @@ jobs:
                           if "client" in decoded and "dev tun" in decoded:
                               with open("vpn.ovpn", "w") as out:
                                   out.write(decoded)
-                              print("Successfully extracted VPN config!")
-                              exit(0)
+                              
+                              print(f"Trying VPN server #{idx}...")
+                              proc = subprocess.Popen(["sudo", "openvpn", "--config", "vpn.ovpn", "--auth-nocache"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                              
+                              connected = False
+                              for _ in range(8):
+                                  time.sleep(1)
+                                  if os.path.exists("/sys/class/net/tun0"):
+                                      connected = True
+                                      break
+                              if connected:
+                                  print("VPN Connected successfully!")
+                                  exit(0)
+                              else:
+                                  proc.terminate()
+                                  subprocess.run(["sudo", "killall", "openvpn"], stderr=subprocess.DEVNULL)
                       except Exception as e:
                           continue
-          print("Failed to extract config")
+          print("All VPN attempts failed, proceeding without VPN...")
           exit(1)
           EOF
           )
           
-          python3 -c "$PYTHON_SCRIPT"
+          python3 -c "$PYTHON_SCRIPT" || true
           
-          if [ -f vpn.ovpn ]; then
-            echo "Starting OpenVPN connection in background..."
-            # Run without --daemon so we can log or continue safely, using nohup & timeout
-            sudo openvpn --config vpn.ovpn --auth-nocache &
-            
-            echo "Waiting for VPN tunnel to establish..."
-            # Wait up to 15 seconds for tun0 interface to appear
-            for i in {1..15}; do
-              if ip addr show dev tun0 2>/dev/null | grep -q "inet"; then
-                echo "VPN Tunnel is UP!"
-                break
-              fi
-              sleep 1
-            done
-            
-            echo "Current Public IP:"
-            curl --max-time 5 ifconfig.me || true
-            echo ""
-          else
-            echo "VPN config extraction failed, proceeding without VPN..."
-          fi
+          echo "Current Public IP:"
+          curl --max-time 5 ifconfig.me || true
+          echo ""
 
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.facebook.com/61552326955433/videos/1423723569156045/?mibextid=rS40aB7S9Ucbxw6v"
+          TARGET_URL: "https://www.facebook.com/61552326955433/videos/1423723569156045/"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -82,7 +79,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium through the VPN connection
+          # 2. Launch Chromium with the new target URL
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -119,11 +116,9 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // Remove login dialogs and restricted overlays
                   const overlays = document.querySelectorAll("div[role=\\x27dialog\\x27], div[data-testid=\\x27royal_login_form\\x27]");
                   overlays.forEach(el => el.remove());
                   
-                  // Force play and unmute all video streams
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
@@ -149,3 +144,4 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
