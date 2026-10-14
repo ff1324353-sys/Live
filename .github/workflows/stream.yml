@@ -1,4 +1,4 @@
-name: FB Live Clean Video With Unmute & Pitch Shift
+name: FB Live Video Crop & Overlay Perfect Final
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.facebook.com/Reuters/videos/3242255905959195/?mibextid=rS40aB7S9Ucbxw6v"
+          TARGET_URL: "https://www.facebook.com/khel.np9/videos/27506206312389280/"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -39,22 +39,25 @@ jobs:
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Skip popups and unmute video using mouse clicks
+          # Wait for page load and skip login dialogs
           sleep 6
           xdotool key Escape
-          sleep 4
+          sleep 3
           
-          # Mute icon එක තියෙන තැනට (පහළ වම් කෙළවරේ වගේ) Mouse එක ගිහින් Click කරලා Sound On කිරීම
-          xdotool mousemove 780 400 click 1
-          sleep 4
+          # Focus video player & press 'm' key to unmute
+          xdotool mousemove 400 300 click 1
+          sleep 1
+          xdotool key m
+          sleep 1
+          xdotool key m
+          sleep 3
 
-          # 3. Capture Screen & PulseAudio with Video/Audio Filters
+          # 3. Capture Screen: Bottom Crop adjusted to 430px + Views overlay box
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
-          -filter_complex "[0:v]crop=800:460:15:130,scale=1280:720,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
+          -filter_complex "[0:v]crop=800:430:15:130,scale=1280:720,drawbox=x=15:y=15:w=120:h=45:color=black@0.95:t=fill,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
           -map "[vout]" -map "[aout]" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4400k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
