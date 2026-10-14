@@ -13,7 +13,7 @@ jobs:
       - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip tor
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
           pip3 install websocket-client
 
       - name: Start Live Stream Setup
@@ -21,10 +21,10 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
         run: |
-          # 1. Start Tor service locally on the runner to bypass geo-restrictions cleanly
-          sudo systemctl start tor
-          echo "Waiting for Tor connection..."
-          sleep 5
+          # 1. Set the user-provided proxy directly
+          SELECTED_PROXY="45.194.90.225:8080"
+          PROXY_ARG="--proxy-server=http://$SELECTED_PROXY"
+          echo "Using User-Provided Proxy: $SELECTED_PROXY"
 
           # 2. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -32,8 +32,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 3. Launch Chromium routed through local Tor SOCKS proxy (localhost:9050)
-          # This completely avoids dead public proxies and bypasses country blocks!
+          # 3. Launch Chromium with the specified proxy
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -43,7 +42,7 @@ jobs:
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
-            --proxy-server="socks5://127.0.0.1:9050" \
+            $PROXY_ARG \
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
@@ -60,7 +59,6 @@ jobs:
           import urllib.request, json, time, urllib.error
           time.sleep(3)
           try:
-              # Get browser websocket debugger target
               response = urllib.request.urlopen("http://localhost:9222/json")
               targets = json.loads(response.read().decode())
               ws_url = None
@@ -71,14 +69,12 @@ jobs:
               if ws_url:
                   import websocket
                   ws = websocket.create_connection(ws_url)
-                  # JS code to unmute all video/audio tags and set volume to max
                   js_code = """
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
                       v.play();
                   });
-                  // Also click any mute buttons if present
                   const muteBtn = document.querySelector("div[aria-label*=\"Mute\"], div[aria-label*=\"Unmute\"]");
                   if(muteBtn) muteBtn.click();
                   """
