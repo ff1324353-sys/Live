@@ -18,7 +18,6 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          # Updated Facebook Video Link:
           TARGET_URL: "https://www.facebook.com/khel.np9/videos/27506206312389280/"
         run: |
           # 1. Start Virtual Display :99 (1280x720 24bit)
@@ -43,10 +42,10 @@ jobs:
           xdotool key Escape
           sleep 6
 
-          # 3. Capture Video, Crop exact player area, scale to HD fullscreen & stream
+          # 3. Capture Video, Fine-tune crop dimensions for Top & Right sides, then stream
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-          -filter_complex "[0:v]crop=840:480:15:95,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
+          -filter_complex "[0:v]crop=800:460:15:130,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
           -map "[vout]" -map 1:a \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
