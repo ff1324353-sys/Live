@@ -19,10 +19,10 @@ jobs:
       - name: Connect to Free VPN (Fast Timeout & Fallback)
         run: |
           echo "Fetching free OpenVPN servers from VPN Gate..."
-          # Added max-time 8 seconds so it never hangs or freezes
           if curl -s --max-time 8 "https://www.vpngate.net/api/iphone/" > vpngate.csv && [ -s vpngate.csv ]; then
             
-            PYTHON_SCRIPT=$(cat << 'EOF'
+            # Write python script safely to a file to avoid syntax/heredoc errors
+            cat << 'EOF' > vpn_fetch.py
             import base64, subprocess, time, os
             try:
                 with open("vpngate.csv", "r", encoding="latin-1") as f:
@@ -64,8 +64,8 @@ jobs:
             print("VPN connection skipped/failed, moving forward...")
             exit(0)
             EOF
-            )
-            python3 -c "$PYTHON_SCRIPT" || true
+            
+            python3 vpn_fetch.py || true
           else
             echo "VPN list fetch timed out or failed. Proceeding directly..."
           fi
@@ -150,4 +150,3 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
