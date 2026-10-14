@@ -20,7 +20,7 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
-          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/?mibextid=rS40aB7S9Ucbxw6v"
+          TARGET_URL: "https://www.facebook.com/61582413664556/videos/867494799719403/"
         run: |
           echo "$FB_COOKIES" > cookies.txt
 
@@ -55,27 +55,27 @@ jobs:
           xdotool key Escape
           sleep 2
 
-          # 4. Inject JS to Unmute Video Automatically
-          python3 -c '
-import urllib.request, json, time, websocket
-time.sleep(2)
-try:
-    response = urllib.request.urlopen("http://localhost:9222/json")
-    targets = json.loads(response.read().decode())
-    ws_url = None
-    for t in targets:
-        if "facebook.com" in t.get("url", ""):
-            ws_url = t.get("webSocketDebuggerUrl")
-            break
-    if ws_url:
-        ws = websocket.create_connection(ws_url)
-        js_code = "document.querySelectorAll(\"video\").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });"
-        msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
-        ws.send(msg)
-        ws.close()
-except Exception as e:
-    print("JS error:", e)
-' || true
+          # 4. Inject JS to Unmute Video Automatically (Clean EOF block)
+          python3 - << 'EOF'
+          import urllib.request, json, time, websocket
+          time.sleep(2)
+          try:
+              response = urllib.request.urlopen("http://localhost:9222/json")
+              targets = json.loads(response.read().decode())
+              ws_url = None
+              for t in targets:
+                  if "facebook.com" in t.get("url", ""):
+                      ws_url = t.get("webSocketDebuggerUrl")
+                      break
+              if ws_url:
+                  ws = websocket.create_connection(ws_url)
+                  js_code = 'document.querySelectorAll("video").forEach(v => { v.muted = false; v.volume = 1.0; v.play(); });'
+                  msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
+                  ws.send(msg)
+                  ws.close()
+          except Exception as e:
+              print("JS error:", e)
+          EOF
 
           sleep 3
 
@@ -88,3 +88,4 @@ except Exception as e:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
