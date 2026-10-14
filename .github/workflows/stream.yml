@@ -36,7 +36,7 @@ jobs:
             --disable-session-crashed-bubble \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
-            --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies \
+            --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies,AudioServiceOutOfProcess \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
@@ -46,21 +46,17 @@ jobs:
           xdotool key Escape
           sleep 2
           
-          # 1. Click center of player to active focus
-          xdotool mousemove 500 350 click 1
+          # 1. Click exact center of player (1280x720 Screen center) to focus player
+          xdotool mousemove 640 360 click 1
           sleep 1
           
-          # 2. Multiple clicks near Mute Icon area (Bottom Right of player)
-          xdotool mousemove 780 500 click 1
-          sleep 0.5
-          xdotool mousemove 780 520 click 1
-          sleep 0.5
-          xdotool mousemove 750 500 click 1
-          sleep 1
-          
-          # 3. Press Unmute shortcuts ('m' and 'Up Arrow' for Volume)
+          # 2. Press 'm' key twice to toggle FB player mute off
           xdotool key m
           sleep 1
+          xdotool key m
+          sleep 1
+          
+          # 3. Increase volume using Up Arrow
           xdotool key Up
           xdotool key Up
           xdotool key Up
@@ -75,3 +71,4 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
