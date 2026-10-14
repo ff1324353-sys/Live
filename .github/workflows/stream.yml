@@ -1,9 +1,7 @@
-name: FB Live Broadcast
+name: FB Live Virtual Screen Capture Test
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */5 * * *'
 
 jobs:
   stream:
@@ -12,20 +10,40 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg & Audio Libraries
+      - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio
 
-      - name: Start Live Stream to Facebook
+      - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
+          # Target Facebook Live Page URL:
+          TARGET_URL: "https://www.facebook.com/tvwanonline24/videos/1032528446511160/"
         run: |
-          ffmpeg -fflags +genpts -re -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -i "http://tvsen5.aynascope.net/willowhd/index.m3u8" \
+          # 1. Start Virtual Display :99 (1280x720 24bit)
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+          sleep 3
+
+          # 2. Launch Chromium with flags for Autoplay & Stability
+          chromium-browser \
+            --no-sandbox \
+            --disable-setuid-sandbox \
+            --autoplay-policy=no-user-gesture-required \
+            --disable-dev-shm-usage \
+            --start-fullscreen \
+            --kiosk "${TARGET_URL}" &
+          
+          # Browser එක Load වී Video එක Play වීමට තත්පර 12ක් Wait කිරීම
+          sleep 12
+
+          # 3. Capture Virtual Screen & Audio, apply filters and stream to FB Live
+          ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-          -filter_complex "[0:v]crop=iw-120:ih-120:60:60,rotate=0.015:c=black,eq=brightness=0.06:contrast=1.14:saturation=1.25:gamma=1.05,setpts=PTS/1.04,scale=1280:720[main];[main]split[bg][fg];[bg]boxblur=15:8[blurred];[fg]scale=1050:590[small];[blurred][small]overlay=(W-w)/2:(H-h)/2,drawbox=x=iw-240:y=50:w=190:h=50:color=black@0.9:t=fill,drawtext=text=SL vs PAK LIVE:x='(w-text_w)/2+100*sin(t)':y='(h-text_h)/2+50*cos(t)':fontsize=30:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
+          -filter_complex "[0:v]eq=brightness=0.05:contrast=1.12:saturation=1.2,scale=1280:720,drawtext=text='TEST STREAM LIVE':x='(w-text_w)/2+80*sin(t)':y='(h-text_h)/2+40*cos(t)':fontsize=28:fontcolor=white@0.5:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
           -map "[vout]" -map 1:a \
-          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 1900k -maxrate 1900k -bufsize 3800k \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
