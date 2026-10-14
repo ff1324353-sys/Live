@@ -10,24 +10,35 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg & Python
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg python3-pip
+          pip3 install --break-system-packages yt-dlp
 
       - name: Start Protected Live Stream to Facebook
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           STREAM_URL: "http://tvsen5.aynascope.net/willowhd/index.m3u8"
         run: |
-          echo "Starting Anti-Copyright Willow HD Stream..."
+          echo "Bypassing server security and starting stream..."
           
           while true; do
-            ffmpeg -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n'"Referer: http://tvsen5.aynascope.net/"$'\r\n' \
+            # yt-dlp හරහා Cloudflare / Token Bypassed Direct Real Link එකක් ලබා ගැනීම
+            REAL_URL=$(yt-dlp --no-check-certificates --geo-bypass -g "$STREAM_URL" 2>/dev/null || echo "$STREAM_URL")
+            
+            if [ -z "$REAL_URL" ]; then
+              REAL_URL="$STREAM_URL"
+            fi
+
+            echo "Connecting to live stream securely..."
+
+            ffmpeg -user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            -headers "Referer: http://tvsen5.aynascope.net/"$'\r\n'"Origin: http://tvsen5.aynascope.net"$'\r\n' \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -rw_timeout 15000000 \
             -fflags +genpts+discardcorrupt \
-            -i "$STREAM_URL" \
+            -i "$REAL_URL" \
             -vf "hflip,scale=1280:720,eq=saturation=1.18:contrast=1.20:brightness=0.03,\
             drawbox=x=970:y=10:w=300:h=110:color=black@0.99:t=fill,\
             drawtext=text='LIVE MATCH':fontcolor=yellow:fontsize=22:x=1010:y=50,\
@@ -39,7 +50,7 @@ jobs:
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$FB_KEY"
             
-            echo "Stream disconnected. Restarting connection in 3 seconds..."
+            echo "Stream disconnected. Reconnecting in 3 seconds..."
             sleep 3
           done
           
