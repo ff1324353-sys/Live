@@ -26,7 +26,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium with Force-Unmute Audio Flags
+          # 2. Launch Chromium without Fullscreen so the video stays precisely on the Left side
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -38,16 +38,17 @@ jobs:
             --mute-audio=false \
             --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies,AudioServiceOutOfProcess \
             --disable-dev-shm-usage \
-            --start-fullscreen \
-            --kiosk "${TARGET_URL}" &
+            --window-size=1280,720 \
+            --window-position=0,0 \
+            "${TARGET_URL}" &
           
           # Wait for page load and skip login dialogs
           sleep 8
           xdotool key Escape
           sleep 2
           
-          # 1. Click exact center of player (1280x720 Screen center) to focus player
-          xdotool mousemove 640 360 click 1
+          # 1. Click directly inside the Video Player on the LEFT side of the screen (x:350, y:320)
+          xdotool mousemove 350 320 click 1
           sleep 1
           
           # 2. Press 'm' key twice to toggle FB player mute off
