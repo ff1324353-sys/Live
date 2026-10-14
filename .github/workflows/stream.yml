@@ -21,8 +21,6 @@ jobs:
           echo "Fetching free OpenVPN server from VPN Gate..."
           curl -s "https://www.vpngate.net/api/iphone/" > vpngate.csv
           
-          # Get the first working OpenVPN TCP/UDP config payload securely
-          # VPN Gate column 15 contains base64 ovpn config
           PYTHON_SCRIPT=$(cat << 'EOF'
           import base64
           with open("vpngate.csv", "r", encoding="latin-1") as f:
@@ -33,7 +31,6 @@ jobs:
                   b64_data = parts[14].strip()
                   if b64_data:
                       try:
-                          # Fix padding for base64 decode if needed
                           missing_padding = len(b64_data) % 4
                           if missing_padding:
                               b64_data += '=' * (4 - missing_padding)
@@ -53,11 +50,23 @@ jobs:
           python3 -c "$PYTHON_SCRIPT"
           
           if [ -f vpn.ovpn ]; then
-            echo "Starting OpenVPN connection..."
-            sudo openvpn --config vpn.ovpn --daemon vpn_conn
-            sleep 10
-            echo "Checking new public IP..."
-            curl ifconfig.me || true
+            echo "Starting OpenVPN connection in background..."
+            # Run without --daemon so we can log or continue safely, using nohup & timeout
+            sudo openvpn --config vpn.ovpn --auth-nocache &
+            
+            echo "Waiting for VPN tunnel to establish..."
+            # Wait up to 15 seconds for tun0 interface to appear
+            for i in {1..15}; do
+              if ip addr show dev tun0 2>/dev/null | grep -q "inet"; then
+                echo "VPN Tunnel is UP!"
+                break
+              fi
+              sleep 1
+            done
+            
+            echo "Current Public IP:"
+            curl --max-time 5 ifconfig.me || true
+            echo ""
           else
             echo "VPN config extraction failed, proceeding without VPN..."
           fi
