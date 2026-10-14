@@ -1,4 +1,4 @@
-name: FB Live Virtual Screen Capture Test
+name: FB Live Virtual Screen Capture Final
 
 on:
   workflow_dispatch:
@@ -18,7 +18,6 @@ jobs:
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          # Target Page / Stream URL:
           TARGET_URL: "https://www.facebook.com/tvwanonline24/videos/1032528446511160/"
         run: |
           # 1. Start Virtual Display :99 (1280x720 24bit)
@@ -26,7 +25,7 @@ jobs:
           export DISPLAY=:99
           sleep 3
 
-          # 2. Launch Chromium with flags to skip First-Run, Terms & Welcome Dialogs
+          # 2. Launch Chromium and auto-remove login dialogs using JS/CSS injection flags
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -34,14 +33,18 @@ jobs:
             --no-default-browser-check \
             --disable-infobars \
             --disable-session-crashed-bubble \
-            --disable-features=Translate \
             --autoplay-policy=no-user-gesture-required \
             --disable-dev-shm-usage \
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Browser එක Load වී Video එක Play වීමට තත්පර 12ක් Wait කිරීම
-          sleep 12
+          # Browser එක Load වී Login Dialog එක එන තෙක් තත්පර 5ක් ඉඳලා, ඒක Close කරන්න Key event එකක් යැවීම (Press Escape key via xdotool)
+          sleep 5
+          sudo apt-get install -y xdotool
+          xdotool key Escape
+          
+          # තවත් ටිකක් වෙලා Wait කිරීම
+          sleep 7
 
           # 3. Capture Virtual Screen & Audio, apply filters and stream to FB Live
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
