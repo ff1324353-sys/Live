@@ -16,56 +16,62 @@ jobs:
           sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip openvpn curl
           pip3 install websocket-client
 
-      - name: Connect to Free VPN (Auto Loop Working Server)
+      - name: Connect to Free VPN (Fast Timeout & Fallback)
         run: |
           echo "Fetching free OpenVPN servers from VPN Gate..."
-          curl -s "https://www.vpngate.net/api/iphone/" > vpngate.csv
-          
-          PYTHON_SCRIPT=$(cat << 'EOF'
-          import base64, subprocess, time, os
-          with open("vpngate.csv", "r", encoding="latin-1") as f:
-              lines = f.readlines()
-          
-          for idx, line in enumerate(lines[2:]):
-              parts = line.strip().split(",")
-              if len(parts) > 14:
-                  b64_data = parts[14].strip()
-                  if b64_data:
-                      try:
-                          missing_padding = len(b64_data) % 4
-                          if missing_padding:
-                              b64_data += '=' * (4 - missing_padding)
-                          decoded = base64.b64decode(b64_data).decode("utf-8", errors="ignore")
-                          if "client" in decoded and "dev tun" in decoded:
-                              with open("vpn.ovpn", "w") as out:
-                                  out.write(decoded)
-                              
-                              print(f"Trying VPN server #{idx}...")
-                              proc = subprocess.Popen(["sudo", "openvpn", "--config", "vpn.ovpn", "--auth-nocache"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                              
-                              connected = False
-                              for _ in range(8):
-                                  time.sleep(1)
-                                  if os.path.exists("/sys/class/net/tun0"):
-                                      connected = True
-                                      break
-                              if connected:
-                                  print("VPN Connected successfully!")
-                                  exit(0)
-                              else:
-                                  proc.terminate()
-                                  subprocess.run(["sudo", "killall", "openvpn"], stderr=subprocess.DEVNULL)
-                      except Exception as e:
-                          continue
-          print("All VPN attempts failed, proceeding without VPN...")
-          exit(1)
-          EOF
-          )
-          
-          python3 -c "$PYTHON_SCRIPT" || true
+          # Added max-time 8 seconds so it never hangs or freezes
+          if curl -s --max-time 8 "https://www.vpngate.net/api/iphone/" > vpngate.csv && [ -s vpngate.csv ]; then
+            
+            PYTHON_SCRIPT=$(cat << 'EOF'
+            import base64, subprocess, time, os
+            try:
+                with open("vpngate.csv", "r", encoding="latin-1") as f:
+                    lines = f.readlines()
+                
+                for idx, line in enumerate(lines[2:]):
+                    parts = line.strip().split(",")
+                    if len(parts) > 14:
+                        b64_data = parts[14].strip()
+                        if b64_data:
+                            try:
+                                missing_padding = len(b64_data) % 4
+                                if missing_padding:
+                                    b64_data += '=' * (4 - missing_padding)
+                                decoded = base64.b64decode(b64_data).decode("utf-8", errors="ignore")
+                                if "client" in decoded and "dev tun" in decoded:
+                                    with open("vpn.ovpn", "w") as out:
+                                        out.write(decoded)
+                                    
+                                    print(f"Trying VPN server #{idx}...")
+                                    proc = subprocess.Popen(["sudo", "openvpn", "--config", "vpn.ovpn", "--auth-nocache"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    
+                                    connected = False
+                                    for _ in range(6):
+                                        time.sleep(1)
+                                        if os.path.exists("/sys/class/net/tun0"):
+                                            connected = True
+                                            break
+                                    if connected:
+                                        print("VPN Connected successfully!")
+                                        exit(0)
+                                    else:
+                                        proc.terminate()
+                                        subprocess.run(["sudo", "killall", "openvpn"], stderr=subprocess.DEVNULL)
+                            except Exception:
+                                continue
+            except Exception:
+                pass
+            print("VPN connection skipped/failed, moving forward...")
+            exit(0)
+            EOF
+            )
+            python3 -c "$PYTHON_SCRIPT" || true
+          else
+            echo "VPN list fetch timed out or failed. Proceeding directly..."
+          fi
           
           echo "Current Public IP:"
-          curl --max-time 5 ifconfig.me || true
+          curl --max-time 4 ifconfig.me || true
           echo ""
 
       - name: Start Live Stream Setup
@@ -79,7 +85,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium with the new target URL
+          # 2. Launch Chromium with the target URL
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
