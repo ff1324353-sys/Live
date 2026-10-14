@@ -1,4 +1,4 @@
-name: FB Live Virtual Screen Capture Final
+name: FB Live Clean Video With Pitch Shift Audio Final
 
 on:
   workflow_dispatch:
@@ -13,16 +13,17 @@ jobs:
       - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils
 
       - name: Start Live Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.facebook.com/khel.np9/videos/27506206312389280/"
         run: |
-          # 1. Start Virtual Display :99 (1280x720 24bit)
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
+          pulseaudio --start &
           sleep 3
 
           # 2. Launch Chromium in Kiosk mode
@@ -42,12 +43,13 @@ jobs:
           xdotool key Escape
           sleep 6
 
-          # 3. Capture Video, Fine-tune crop dimensions for Top & Right sides, then stream
+          # 3. Capture Screen & PulseAudio with Video/Audio Filters (Pitch Shift)
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-          -filter_complex "[0:v]crop=800:460:15:130,scale=1280:720,eq=brightness=0.04:contrast=1.1:saturation=1.15,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.4:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout]" \
-          -map "[vout]" -map 1:a \
+          -f pulse -i default \
+          -filter_complex "[0:v]crop=800:460:15:130,scale=1280:720,eq=brightness=0.06:contrast=1.15:saturation=1.25:gamma=1.1,drawtext=text='LIVE STREAM':x='(w-text_w)/2+70*sin(t)':y='(h-text_h)/2+30*cos(t)':fontsize=26:fontcolor=white@0.3:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf[vout];[1:a]asetrate=44100*1.05,aresample=44100,atempo=1/1.05[aout]" \
+          -map "[vout]" -map "[aout]" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -g 60 -r 30 -c:a aac -b:a 64k -ar 44100 \
+          -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
