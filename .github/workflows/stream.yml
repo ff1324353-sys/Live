@@ -41,12 +41,12 @@ jobs:
             --start-fullscreen \
             --kiosk "https://xhamsterlive.com/x__queen_SL" &
           
-          # Wait for page load
-          sleep 12
+          # Wait longer for page load and overlays to clear
+          sleep 15
           xdotool key Escape
-          sleep 2
+          sleep 3
           
-          # 3. Inject JS to click "Verify Age", remove popups, cookies and auto-play
+          # 3. Inject JS to click buttons, remove overlays, and play video
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -60,7 +60,6 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // 1. Click "Verify Age" or "Accept" buttons if available
                   const btnList = document.querySelectorAll("button, a, div");
                   btnList.forEach(el => {
                       if (el.innerText && (el.innerText.includes("Verify Age") || el.innerText.includes("Accept All") || el.innerText.includes("Confirm"))) {
@@ -68,7 +67,6 @@ jobs:
                       }
                   });
 
-                  // 2. Remove Age verification overlays, backdrops & modals
                   const removeSelectors = [
                       "div[class*=\\x27overlay\\x27]",
                       "div[class*=\\x27modal\\x27]",
@@ -81,7 +79,6 @@ jobs:
                       document.querySelectorAll(sel).forEach(el => el.remove());
                   });
 
-                  // 3. Unmute and force play all videos
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
@@ -91,19 +88,18 @@ jobs:
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("Age Verification cleared & Video Played successfully!")
+                  print("Overlay cleared successfully!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
-          sleep 5
+          sleep 6
 
-          # 4. Capture Video Area (Cropped/Scaled cleanly) and Push to Telegram Live RTMP
+          # 4. Capture Screen with fallback/robust options and Push to Telegram Live RTMP
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
-          -filter_complex "[0:v]crop=680:480:80:120,scale=1280:720[vout];[1:a]aresample=44100[aout]" \
+          -filter_complex "[0:v]scale=1280:720[vout];[1:a]aresample=44100[aout]" \
           -map "[vout]" -map "[aout]" \
           -c:v libx264 -preset veryfast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
           -c:a aac -b:a 128k -ar 44100 -ac 2 \
           -f flv "rtmps://dc5-1.rtmp.t.me/s/5471975795:vXuLHRfeef_dt6l9Oh6YPw"
-          
