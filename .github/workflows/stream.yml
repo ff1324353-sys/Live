@@ -84,7 +84,7 @@ jobs:
 
           sleep 4
 
-          # 4. Capture Screen & PulseAudio Stream and Push to Telegram Live RTMP
+          # 4. Capture Screen & PulseAudio Stream and Push to Correct Telegram DC RTMP
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -filter_complex "[0:v]scale=1280:720[vout];[1:a]aresample=44100[aout]" \
@@ -92,5 +92,5 @@ jobs:
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
-          -f flv "rtmps://dc4-1.rtmp.t.me/s/${TG_KEY}"
+          -f flv "rtmps://dc5-1.rtmp.t.me/s/${TG_KEY}"
           
