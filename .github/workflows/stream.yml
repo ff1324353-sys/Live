@@ -1,4 +1,4 @@
-name: StreamX Website Capture Restream
+name: StreamX Crop & Restream to FB
 
 on:
   workflow_dispatch:
@@ -21,13 +21,16 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.streamx.website/match.html?id=EvI-2026-09&title=LIVE%20-%20Pakistan%20Womens%20Under%2019s%20T20%20Tri%20Series%202026"
         run: |
-          # 1. Start Virtual Display & PulseAudio
+          # 1. Set Timezone to Sri Lanka (Asia/Colombo) so countdown matches correctly
+          sudo timedatectl set-timezone Asia/Colombo
+
+          # 2. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium pointing to your website match page
+          # 3. Launch Chromium pointing to your website match page
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -41,13 +44,13 @@ jobs:
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
-            --start-fullscreen \
-            --kiosk "${TARGET_URL}" &
+            --window-size=1280,720 \
+            "${TARGET_URL}" &
           
           # Wait for website page to load
           sleep 10
           
-          # 3. Inject JS to type Username, click Enter Live Room, and unmute video
+          # 4. Inject JS to type Username, click Enter Live Room, and unmute video
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -95,9 +98,11 @@ jobs:
 
           sleep 6
 
-          # 4. Capture Screen & PulseAudio Stream and Restream to Facebook
+          # 5. Capture Screen with FFmpeg, Crop only to Video Player box, and Restream to Facebook
+          # crop=width:height:x:y (Adjusted to capture the exact video player area)
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
+          -filter:v "crop=900:506:190:130,scale=1280:720" \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
