@@ -1,4 +1,4 @@
-name: Telegram Live Stream Bot (YouTube WCL)
+name: Facebook Live Stream via Invidious Screen Capture
 
 on:
   workflow_dispatch:
@@ -17,14 +17,16 @@ jobs:
           pip3 install websocket-client
 
       - name: Start Live Stream Setup
+        env:
+          FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          # 1. Start Virtual Display & PulseAudio
+          # 1. Start Virtual Display & Audio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1 || true
           sleep 3
 
-          # 2. Launch Chromium with WCL YouTube Embed Link
+          # 2. Launch Chromium with Invidious Embed Link (Bypasses Sign-in & Bot block)
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -39,7 +41,7 @@ jobs:
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
             --start-fullscreen \
-            --kiosk "https://www.youtube.com/embed/n3qodO8ER_4?autoplay=1" &
+            --kiosk "https://yewtu.be/embed/n3qodO8ER_4?autoplay=1" &
           
           sleep 12
           xdotool key Escape
@@ -59,7 +61,6 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // Unmute and Play Video
                   const video = document.querySelector("video");
                   if (video) {
                       video.muted = false;
@@ -70,18 +71,18 @@ jobs:
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("WCL YouTube Embed Unmuted & Playing!")
+                  print("Invidious Stream Ready!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
           sleep 5
 
-          # 4. Capture Screen & Stream to Telegram Live RTMP
+          # 4. Capture Screen with FFmpeg & Stream to Facebook
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+          -f pulse -i default \
           -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
           -c:a aac -b:a 128k -ar 44100 -ac 2 \
           -flvflags no_duration_filesize \
-          -f flv "rtmps://dc5-1.rtmp.t.me/s/5471975795:vXuLHRfeef_dt6l9Oh6YPw"
+          -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
           
