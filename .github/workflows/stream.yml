@@ -10,10 +10,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg & yt-dlp
+      - name: Setup Node.js (JS Runtime for yt-dlp)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install FFmpeg & Latest yt-dlp
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg python3-pip fonts-dejavu-core
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
           sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
           sudo chmod a+rx /usr/local/bin/yt-dlp
 
@@ -21,11 +26,13 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          # Direct YouTube URL
           YOUTUBE_URL="https://www.youtube.com/watch?v=n3qodO8ER_4"
 
-          # Get direct stream link via yt-dlp and push to Facebook RTMP using FFmpeg with Filters
-          yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -g "$YOUTUBE_URL" | {
+          # Pass Node.js JS runtime & YouTube Mobile Client flags to bypass bot check
+          yt-dlp --js-runtimes node \
+            --extractor-args "youtube:player_client=android,web" \
+            -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
+            -g "$YOUTUBE_URL" | {
             read -r VIDEO_URL
             read -r AUDIO_URL || AUDIO_URL="$VIDEO_URL"
 
