@@ -14,7 +14,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils
-          npm install playwright extra-stealth-playwright playwright-extra
+          npm install playwright playwright-extra puppeteer-extra-plugin-stealth
+          npx playwright install chromium --with-deps
 
       - name: Start Playwright Browser & Restream
         env:
@@ -47,8 +48,8 @@ jobs:
             await page.setViewportSize({ width: 1280, height: 720 });
             await page.goto(process.env.TARGET_URL, { waitUntil: "domcontentloaded" });
             
-            // Wait for player and handle popups/play
-            await page.waitForTimeout(10000);
+            // Wait for player to load
+            await page.waitForTimeout(8000);
             
             // Unmute & Play
             await page.evaluate(() => {
@@ -61,7 +62,7 @@ jobs:
           })();
           ' &
 
-          sleep 15
+          sleep 12
           
           # Toggle Fullscreen view
           xdotool key f
@@ -74,3 +75,4 @@ jobs:
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          
