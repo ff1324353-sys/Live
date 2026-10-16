@@ -1,4 +1,4 @@
-name: Facebook Live Stream via Chromium Capture
+name: Facebook Live Stream via Direct M3U8 Link
 
 on:
   workflow_dispatch:
@@ -10,43 +10,22 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install FFmpeg & Fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            ffmpeg \
-            chromium-browser \
-            xvfb \
-            pulseaudio \
-            alsa-utils \
-            fonts-dejavu-core
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
 
-      - name: Start Virtual Display & Stream to Facebook
+      - name: Stream Direct HLS to Facebook with Anti-Copyright Filters
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
-          export DISPLAY=:99
+          STREAM_URL="https://in-mc-flive.fancode.com/mumbai/4249229_english_hls_dd4592751127063_1ta-di_h264/1080p.m3u8?hdntl=Expires=1792248717~_GO=Generated~acl=/mumbai/4249229_english_hls_dd4592751127063_1ta-di_h264/*~SessionID=fc-app_sportsguruand_watcho_9de5edcd-aaa9-4b~Signature=AZJsJWYiWBmlAJM24W33UP8xbEezLrwPwPoHsv73dNLp5dT77gy8NDYzQx8Y1PalMOilsR3ax9ySJBb0YAGYcY6NtnYH"
 
-          pulseaudio --start || true
-
-          # Added flags to bypass terms/first-run dialogs and enable autoplay
-          chromium-browser \
-            --no-sandbox \
-            --disable-gpu \
-            --window-size=1280,720 \
-            --no-first-run \
-            --no-default-browser-check \
-            --autoplay-policy=no-user-gesture-required \
-            --start-fullscreen \
-            --kiosk "https://www.fancode.com/cricket/tour/world-championship-of-legends-2026-19879892/matches/australia-champions-vs-west-indies-champions-4249229/live-match-info" > /dev/null 2>&1 &
-
-          sleep 12
-
-          ffmpeg -y \
-            -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
-            -f pulse -i default \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text='RANUWA LIVE':x=w-tw-30:y=30:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=8[v]; [1:a]asetrate=44100*1.01,aresample=44100[a]" \
+          # User-Agent & Headers added so FanCode server accepts FFmpeg connection
+          ffmpeg -re \
+            -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"$'\r\n'"Referer: https://www.fancode.com/"$'\r\n' \
+            -i "$STREAM_URL" \
+            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text='RANUWA LIVE':x=w-tw-30:y=30:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=8[v]; [0:a]asetrate=44100*1.01,aresample=44100[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
