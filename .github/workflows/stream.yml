@@ -1,4 +1,4 @@
-name: Telegram Live Stream Bot
+name: YT Browser Capture Restream to FB
 
 on:
   workflow_dispatch:
@@ -16,15 +16,18 @@ jobs:
           sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
           pip3 install websocket-client
 
-      - name: Start Live Stream Setup
+      - name: Start Browser & Stream Setup
+        env:
+          FB_KEY: ${{ secrets.FB_KEY }}
+          TARGET_URL: "https://www.youtube.com/live/pMfYTkk4YRg?si=1wCLhqY4EyxDfo_U"
         run: |
-          # 1. Start Virtual Display & Dummy Audio
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
-          pulseaudio -D --exit-idle-time=-1 || true
+          pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium
+          # 2. Launch Chromium in Kiosk mode pointing to YouTube Live
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -39,13 +42,14 @@ jobs:
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
             --start-fullscreen \
-            --kiosk "https://xhamsterlive.com/x__queen_SL" &
+            --kiosk "${TARGET_URL}" &
           
+          # Wait for YouTube player to load and press 'f' for fullscreen view
           sleep 12
-          xdotool key Escape
+          xdotool key f
           sleep 2
           
-          # 3. Inject JS to clear overlays, click "Verify Age" and play video
+          # 3. Inject JS to Unmute, Play, and clean YouTube player controls for a clear stream view
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -54,54 +58,38 @@ jobs:
               targets = json.loads(response.read().decode())
               ws_url = None
               for t in targets:
-                  ws_url = t.get("webSocketDebuggerUrl")
-                  break
+                  if "youtube.com" in t.get("url", ""):
+                      ws_url = t.get("webSocketDebuggerUrl")
+                      break
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // Click age verify button if exists
-                  const btnList = document.querySelectorAll("button, a, div");
-                  btnList.forEach(el => {
-                      if (el.innerText && (el.innerText.includes("Verify Age") || el.innerText.includes("Accept") || el.innerText.includes("Confirm"))) {
-                          try { el.click(); } catch(e){}
-                      }
-                  });
-
-                  // Remove overlay popups
-                  const removeSelectors = [
-                      "div[class*=\\x27overlay\\x27]",
-                      "div[class*=\\x27modal\\x27]",
-                      "div[class*=\\x27backdrop\\x27]",
-                      "div[class*=\\x27cookie\\x27]",
-                      "div[class*=\\x27age\\x27]",
-                      "div[role=\\x27dialog\\x27]"
-                  ];
-                  removeSelectors.forEach(sel => {
-                      document.querySelectorAll(sel).forEach(el => el.remove());
-                  });
-
-                  // Play video
+                  // Force play and unmute video
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
                       v.play().catch(err => console.log(err));
                   });
+                  
+                  // Hide YouTube controls overlay for a clean capture
+                  const controls = document.querySelector(".ytp-chrome-bottom");
+                  if(controls) controls.style.display = "none";
                   """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("JS executed successfully!")
+                  print("YouTube unmuted and UI cleaned!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
           sleep 4
 
-          # 4. FFmpeg Capture with Fallback Silent Audio Generator (Prevents Exit 234 Crash)
+          # 4. Capture Screen & PulseAudio Stream and Restream to Facebook
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
-          -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -c:a aac -b:a 128k -ar 44100 -ac 2 \
-          -flvflags no_duration_filesize \
-          -f flv "rtmps://dc5-1.rtmp.t.me/s/5471975795:vXuLHRfeef_dt6l9Oh6YPw"
+          -f pulse -i default \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
+          -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
+          -max_interleave_delta 0 \
+          -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
           
