@@ -47,7 +47,7 @@ jobs:
           # Wait for website page to load
           sleep 10
           
-          # 3. Inject JS to play/unmute video elements on the page if needed
+          # 3. Inject JS to type Username, click Enter Live Room, and unmute video
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -62,21 +62,38 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  document.querySelectorAll("video").forEach(v => {
-                      v.muted = false;
-                      v.volume = 1.0;
-                      v.play().catch(err => console.log(err));
-                  });
+                  // Fill input box if present
+                  const input = document.querySelector("input[type=\\x27text\\x27], input[placeholder*=\\x27Username\\x27]");
+                  if (input) {
+                      input.value = "LiveUser";
+                      input.dispatchEvent(new Event("input", { bubbles: true }));
+                  }
+                  
+                  // Click Enter Live Room button
+                  const buttons = Array.from(document.querySelectorAll("button, input[type=\\x27submit\\x27]"));
+                  const enterBtn = buttons.find(b => b.innerText.includes("Enter") || b.value.includes("Enter"));
+                  if (enterBtn) {
+                      enterBtn.click();
+                  }
+
+                  // Force play & unmute all videos after popup is dismissed
+                  setTimeout(() => {
+                      document.querySelectorAll("video").forEach(v => {
+                          v.muted = false;
+                          v.volume = 1.0;
+                          v.play().catch(err => console.log(err));
+                      });
+                  }, 2000);
                   """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("Website video unmuted!")
+                  print("Popup bypassed and video played!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
-          sleep 4
+          sleep 6
 
           # 4. Capture Screen & PulseAudio Stream and Restream to Facebook
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
