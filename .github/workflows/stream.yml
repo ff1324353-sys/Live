@@ -1,4 +1,4 @@
-name: Facebook Live Stream via yt-dlp with Cookies
+name: Facebook Live Stream via Chromium Capture
 
 on:
   workflow_dispatch:
@@ -10,42 +10,47 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install FFmpeg & Latest yt-dlp
+      - name: Install Dependencies (Chromium, FFmpeg, Xvfb, Alsa)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
-          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-          sudo chmod a+rx /usr/local/bin/yt-dlp
+          sudo apt-get install -y \
+            ffmpeg \
+            chromium-browser \
+            xvfb \
+            pulseaudio \
+            alsa-utils \
+            fonts-dejavu-core
 
-      - name: Stream YouTube Live directly to Facebook with Anti-Copyright
+      - name: Start Virtual Display & Stream to Facebook
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          YT_COOKIES: ${{ secrets.YT_COOKIES }}
         run: |
-          # Save formatted cookies to file
-          printf "%s\n" "$YT_COOKIES" > cookies.txt
+          # 1. Start Virtual Framebuffer (Xvfb) on display :99 with HD resolution
+          Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
+          export DISPLAY=:99
 
-          YOUTUBE_URL="https://www.youtube.com/watch?v=n3qodO8ER_4"
+          # 2. Start PulseAudio for sound handling
+          pulseaudio --start || true
 
-          # Stream with Cookies and Filters
-          yt-dlp --js-runtimes node \
-            --cookies cookies.txt \
-            -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
-            -g "$YOUTUBE_URL" | {
-            read -r VIDEO_URL
-            read -r AUDIO_URL || AUDIO_URL="$VIDEO_URL"
+          # 3. Open FanCode match URL in Chromium (Headless off, full screen / kiosk mode)
+          # Note: If login is required, we can add user data dir or let it load
+          chromium-browser \
+            --no-sandbox \
+            --disable-gpu \
+            --window-size=1280,720 \
+            --kiosk "https://www.fancode.com/cricket/tour/world-championship-of-legends-2026-19879892/matches/australia-champions-vs-west-indies-champions-4249229/live-match-info" > /dev/null 2>&1 &
 
-            ffmpeg -re -i "$VIDEO_URL" -i "$AUDIO_URL" \
+          # Wait 10 seconds for browser to load the page and stream to start playing
+          sleep 10
+
+          # 4. Capture Virtual Screen (:99) and Audio using FFmpeg, apply Anti-Copyright filters, and push to Facebook RTMP
+          ffmpeg -y \
+            -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
+            -f pulse -i default \
             -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text='RANUWA LIVE':x=w-tw-30:y=30:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=8[v]; [1:a]asetrate=44100*1.01,aresample=44100[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          }
-          
+            
