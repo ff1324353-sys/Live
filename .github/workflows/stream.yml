@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Dependencies & xdotool
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -19,6 +19,7 @@ jobs:
             xvfb \
             pulseaudio \
             alsa-utils \
+            xdotool \
             fonts-dejavu-core
 
       - name: Start Virtual Display & Stream to Facebook
@@ -30,7 +31,7 @@ jobs:
 
           pulseaudio --start || true
 
-          # Launch Chromium in virtual display with auto-play & bypass flags
+          # Launch Chromium in virtual display
           chromium-browser \
             --no-sandbox \
             --disable-gpu \
@@ -41,7 +42,12 @@ jobs:
             --start-fullscreen \
             --kiosk "https://www.fancode.com/cricket/tour/world-championship-of-legends-2026-19879892/matches/australia-champions-vs-west-indies-champions-4249229/live-match-info" > /dev/null 2>&1 &
 
-          sleep 12
+          # Wait 10 seconds for page load
+          sleep 10
+
+          # Auto click center of screen to trigger video play
+          xdotool mousemove 640 360 click 1
+          sleep 3
 
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
