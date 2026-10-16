@@ -1,4 +1,4 @@
-name: YT Restream Playwright Stealth
+name: StreamX Website Capture Restream
 
 on:
   workflow_dispatch:
@@ -10,65 +10,75 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Virtual Display, Node & FFmpeg
+      - name: Install Virtual Display, Browser & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils
-          npm install playwright playwright-extra puppeteer-extra-plugin-stealth
-          npx playwright install chromium --with-deps
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
+          pip3 install websocket-client
 
-      - name: Start Playwright Browser & Restream
+      - name: Start Browser & Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.youtube.com/watch?v=pMfYTkk4YRg"
+          TARGET_URL: "https://www.streamx.website/match.html?id=EvI-2026-09&title=LIVE%20-%20Pakistan%20Womens%20Under%2019s%20T20%20Tri%20Series%202026"
         run: |
-          # 1. Start Virtual Display & Audio
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Stealth Playwright Node Script
-          node -e '
-          const { chromium } = require("playwright-extra");
-          const stealth = require("puppeteer-extra-plugin-stealth")();
-          chromium.use(stealth);
-
-          (async () => {
-            const browser = await chromium.launch({
-              headless: false,
-              args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--autoplay-policy=no-user-gesture-required",
-                "--window-size=1280,720"
-              ]
-            });
-            const page = await browser.newPage();
-            await page.setViewportSize({ width: 1280, height: 720 });
-            await page.goto(process.env.TARGET_URL, { waitUntil: "domcontentloaded" });
-            
-            // Wait for player to load
-            await page.waitForTimeout(8000);
-            
-            // Unmute & Play
-            await page.evaluate(() => {
-              const v = document.querySelector("video");
-              if (v) { v.muted = false; v.volume = 1.0; v.play(); }
-            });
-
-            // Keep browser alive
-            await new Promise(() => {});
-          })();
-          ' &
-
-          sleep 12
+          # 2. Launch Chromium pointing to your website match page
+          chromium-browser \
+            --no-sandbox \
+            --disable-setuid-sandbox \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-infobars \
+            --disable-session-crashed-bubble \
+            --autoplay-policy=no-user-gesture-required \
+            --mute-audio=false \
+            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            --remote-debugging-port=9222 \
+            --remote-allow-origins=* \
+            --disable-dev-shm-usage \
+            --start-fullscreen \
+            --kiosk "${TARGET_URL}" &
           
-          # Toggle Fullscreen view
-          xdotool key f
-          sleep 3
+          # Wait for website page to load
+          sleep 10
+          
+          # 3. Inject JS to play/unmute video elements on the page if needed
+          python3 -c '
+          import urllib.request, json, time, websocket
+          time.sleep(3)
+          try:
+              response = urllib.request.urlopen("http://localhost:9222/json")
+              targets = json.loads(response.read().decode())
+              ws_url = None
+              for t in targets:
+                  if "streamx.website" in t.get("url", ""):
+                      ws_url = t.get("webSocketDebuggerUrl")
+                      break
+              if ws_url:
+                  ws = websocket.create_connection(ws_url)
+                  js_code = """
+                  document.querySelectorAll("video").forEach(v => {
+                      v.muted = false;
+                      v.volume = 1.0;
+                      v.play().catch(err => console.log(err));
+                  });
+                  """
+                  msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
+                  ws.send(msg)
+                  ws.close()
+                  print("Website video unmuted!")
+          except Exception as e:
+              print("JS error:", e)
+          ' || true
 
-          # 3. Capture Screen & Stream to FB Live
+          sleep 4
+
+          # 4. Capture Screen & PulseAudio Stream and Restream to Facebook
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
