@@ -1,4 +1,4 @@
-name: YT Browser Capture Restream to FB
+name: YT Browser Capture Restream to FB Fixed
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium in Kiosk mode pointing to YouTube Live
+          # 2. Launch Chromium with extra flags to bypass automated bot detection screens
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -35,6 +35,7 @@ jobs:
             --no-default-browser-check \
             --disable-infobars \
             --disable-session-crashed-bubble \
+            --disable-blink-features=AutomationControlled \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
             --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
@@ -44,12 +45,12 @@ jobs:
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Wait for YouTube player to load and press 'f' for fullscreen view
+          # Wait for YouTube player to load
           sleep 12
           xdotool key f
           sleep 2
           
-          # 3. Inject JS to Unmute, Play, and clean YouTube player controls for a clear stream view
+          # 3. Advanced JS to clear YouTube bot sign-in overlays, play, and unmute
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -64,6 +65,10 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
+                  // Remove YouTube sign-in/bot check dialogs if they appear
+                  const botOverlays = document.querySelectorAll("ytd-enforcement-message-view-model, tp-yt-paper-dialog, #dismiss-button, [aria-label*=\\x27Sign in\\x27]");
+                  botOverlays.forEach(el => el.remove());
+                  
                   // Force play and unmute video
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
@@ -78,7 +83,7 @@ jobs:
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("YouTube unmuted and UI cleaned!")
+                  print("YouTube bot overlay cleared and video unmuted!")
           except Exception as e:
               print("JS error:", e)
           ' || true
