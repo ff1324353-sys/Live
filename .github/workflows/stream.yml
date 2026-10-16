@@ -1,4 +1,4 @@
-name: YT Browser Capture Restream to FB Fixed
+name: YT Embed Capture Restream to FB
 
 on:
   workflow_dispatch:
@@ -19,7 +19,8 @@ jobs:
       - name: Start Browser & Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.youtube.com/live/pMfYTkk4YRg?si=1wCLhqY4EyxDfo_U"
+          # Using Embed URL to bypass Chat & YouTube Bot Sign-in Overlays cleanly
+          TARGET_URL: "https://www.youtube.com/embed/pMfYTkk4YRg?autoplay=1"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -27,7 +28,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium with extra flags to bypass automated bot detection screens
+          # 2. Launch Chromium in Fullscreen Embed Mode
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -45,52 +46,40 @@ jobs:
             --start-fullscreen \
             --kiosk "${TARGET_URL}" &
           
-          # Wait for YouTube player to load
-          sleep 12
-          xdotool key f
-          sleep 2
+          sleep 8
           
-          # 3. Advanced JS to clear YouTube bot sign-in overlays, play, and unmute
+          # 3. Inject JS to Unmute & Force Play Embed Video
           python3 -c '
           import urllib.request, json, time, websocket
-          time.sleep(3)
+          time.sleep(2)
           try:
               response = urllib.request.urlopen("http://localhost:9222/json")
               targets = json.loads(response.read().decode())
               ws_url = None
               for t in targets:
-                  if "youtube.com" in t.get("url", ""):
+                  if "youtube" in t.get("url", ""):
                       ws_url = t.get("webSocketDebuggerUrl")
                       break
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // Remove YouTube sign-in/bot check dialogs if they appear
-                  const botOverlays = document.querySelectorAll("ytd-enforcement-message-view-model, tp-yt-paper-dialog, #dismiss-button, [aria-label*=\\x27Sign in\\x27]");
-                  botOverlays.forEach(el => el.remove());
-                  
-                  // Force play and unmute video
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
                       v.play().catch(err => console.log(err));
                   });
-                  
-                  // Hide YouTube controls overlay for a clean capture
-                  const controls = document.querySelector(".ytp-chrome-bottom");
-                  if(controls) controls.style.display = "none";
                   """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("YouTube bot overlay cleared and video unmuted!")
+                  print("Embed Video Unmuted!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
           sleep 4
 
-          # 4. Capture Screen & PulseAudio Stream and Restream to Facebook
+          # 4. Capture Screen & PulseAudio Stream to FB Live
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
