@@ -1,4 +1,4 @@
-name: Facebook Live Stream via yt-dlp Login
+name: Facebook Live Stream via yt-dlp OAuth2
 
 on:
   workflow_dispatch:
@@ -22,17 +22,16 @@ jobs:
           sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
           sudo chmod a+rx /usr/local/bin/yt-dlp
 
-      - name: Stream YouTube Live directly to Facebook
+      - name: Stream YouTube Live directly to Facebook with OAuth2
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          YT_USERNAME: ${{ secrets.YT_USERNAME }}
-          YT_PASSWORD: ${{ secrets.YT_PASSWORD }}
         run: |
           YOUTUBE_URL="https://www.youtube.com/watch?v=n3qodO8ER_4"
 
-          # Use username and password to authenticate yt-dlp
+          # Use OAuth2 authentication (--username oauth2 --password '')
+          # Note: The first time you run this, check the GitHub Actions logs for the device login code and URL to authorize!
           yt-dlp --js-runtimes node \
-            -u "$YT_USERNAME" -p "$YT_PASSWORD" \
+            --username oauth2 --password '' \
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             -g "$YOUTUBE_URL" | {
             read -r VIDEO_URL
