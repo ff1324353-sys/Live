@@ -1,4 +1,4 @@
-name: YT Live Screen Capture Restream
+name: YT Live Undetected Screen Capture
 
 on:
   workflow_dispatch:
@@ -10,16 +10,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Virtual Display, Browser & FFmpeg
+      - name: Install Virtual Display, Browser, FFmpeg & Undetected Driver
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
-          pip3 install websocket-client
+          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils python3-pip
+          pip3 install undetected-chromedriver websocket-client
 
-      - name: Start Browser & Stream Setup
+      - name: Start Browser with Bot Bypass & Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          # Using direct watch URL to fix Error 153 embedding block
           TARGET_URL: "https://www.youtube.com/watch?v=pMfYTkk4YRg"
         run: |
           # 1. Start Virtual Display & PulseAudio
@@ -28,68 +27,47 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium with Real-User Flags to prevent Bot Checks & Chat-only view
-          chromium-browser \
-            --no-sandbox \
-            --disable-setuid-sandbox \
-            --no-first-run \
-            --no-default-browser-check \
-            --disable-infobars \
-            --disable-session-crashed-bubble \
-            --disable-blink-features=AutomationControlled \
-            --autoplay-policy=no-user-gesture-required \
-            --mute-audio=false \
-            --window-size=1280,720 \
-            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
-            --remote-debugging-port=9222 \
-            --remote-allow-origins=* \
-            --disable-dev-shm-usage \
-            "${TARGET_URL}" &
+          # 2. Launch Undetected Chrome via Python script
+          python3 -c '
+          import undetected_chromedriver as uc
+          import time, os
+
+          options = uc.ChromeOptions()
+          options.add_argument("--window-size=1280,720")
+          options.add_argument("--autoplay-policy=no-user-gesture-required")
+          options.add_argument("--no-first-run")
+          options.add_argument("--disable-infobars")
+          options.add_argument("--disable-popup-blocking")
+
+          driver = uc.Chrome(options=options, version_main=120)
+          driver.get("'"${TARGET_URL}"'")
           
-          # Wait for YouTube video page to load
-          sleep 12
+          time.sleep(10)
+
+          # Auto click dismiss / play if needed and toggle fullscreen
+          try:
+              # Click dismiss or close overlay if exists
+              driver.execute_script("""
+                  const btn = document.querySelector("#dismiss-button, tp-yt-paper-button");
+                  if(btn) btn.click();
+                  
+                  const v = document.querySelector("video");
+                  if(v) { v.muted = false; v.volume = 1.0; v.play(); }
+              """)
+          except Exception as e:
+              print("Script error:", e)
+
+          # Keep driver alive in background
+          time.sleep(3600)
+          ' &
+
+          sleep 15
           
-          # Press 'f' key using xdotool to make YouTube player Fullscreen automatically
+          # Press 'f' key using xdotool to make player Fullscreen
           xdotool key f
           sleep 3
 
-          # 3. Inject JS to Unmute, Force Play and hide chat/overlays
-          python3 -c '
-          import urllib.request, json, time, websocket
-          time.sleep(2)
-          try:
-              response = urllib.request.urlopen("http://localhost:9222/json")
-              targets = json.loads(response.read().decode())
-              ws_url = None
-              for t in targets:
-                  if "youtube" in t.get("url", ""):
-                      ws_url = t.get("webSocketDebuggerUrl")
-                      break
-              if ws_url:
-                  ws = websocket.create_connection(ws_url)
-                  js_code = """
-                  // Remove any sign-in dialogs or bot overlays
-                  const dialogs = document.querySelectorAll("ytd-enforcement-message-view-model, tp-yt-paper-dialog, #dismiss-button");
-                  dialogs.forEach(el => el.remove());
-                  
-                  // Force play & unmute
-                  document.querySelectorAll("video").forEach(v => {
-                      v.muted = false;
-                      v.volume = 1.0;
-                      v.play().catch(err => console.log(err));
-                  });
-                  """
-                  msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
-                  ws.send(msg)
-                  ws.close()
-                  print("Video unmuted & bot checks cleared!")
-          except Exception as e:
-              print("JS error:", e)
-          ' || true
-
-          sleep 4
-
-          # 4. Capture Screen & Restream to FB Live
+          # 3. Capture Screen & Restream to FB Live
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
