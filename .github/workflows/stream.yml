@@ -15,15 +15,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
 
-      - name: Stream Direct HLS to Facebook with Anti-Copyright Filters
+      - name: Stream Direct HLS to Facebook with Headers
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
           STREAM_URL="https://in-mc-flive.fancode.com/mumbai/4249229_english_hls_dd4592751127063_1ta-di_h264/1080p.m3u8?hdntl=Expires=1792248717~_GO=Generated~acl=/mumbai/4249229_english_hls_dd4592751127063_1ta-di_h264/*~SessionID=fc-app_sportsguruand_watcho_9de5edcd-aaa9-4b~Signature=AZJsJWYiWBmlAJM24W33UP8xbEezLrwPwPoHsv73dNLp5dT77gy8NDYzQx8Y1PalMOilsR3ax9ySJBb0YAGYcY6NtnYH"
 
-          # User-Agent & Headers added so FanCode server accepts FFmpeg connection
           ffmpeg -re \
-            -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"$'\r\n'"Referer: https://www.fancode.com/"$'\r\n' \
+            -headers "User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"$'\r\n'"Origin: https://www.fancode.com"$'\r\n'"Referer: https://www.fancode.com/"$'\r\n' \
             -i "$STREAM_URL" \
             -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text='RANUWA LIVE':x=w-tw-30:y=30:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=8[v]; [0:a]asetrate=44100*1.01,aresample=44100[a]" \
             -map "[v]" -map "[a]" \
