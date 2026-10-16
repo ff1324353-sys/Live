@@ -1,4 +1,4 @@
-name: Facebook Live Stream via yt-dlp OAuth2
+name: Facebook Live Stream via yt-dlp with Cookies
 
 on:
   workflow_dispatch:
@@ -22,16 +22,19 @@ jobs:
           sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
           sudo chmod a+rx /usr/local/bin/yt-dlp
 
-      - name: Stream YouTube Live directly to Facebook with OAuth2
+      - name: Stream YouTube Live directly to Facebook with Anti-Copyright
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
         run: |
+          # Save formatted cookies to file
+          printf "%s\n" "$YT_COOKIES" > cookies.txt
+
           YOUTUBE_URL="https://www.youtube.com/watch?v=n3qodO8ER_4"
 
-          # Use OAuth2 authentication (--username oauth2 --password '')
-          # Note: The first time you run this, check the GitHub Actions logs for the device login code and URL to authorize!
+          # Stream with Cookies and Filters
           yt-dlp --js-runtimes node \
-            --username oauth2 --password '' \
+            --cookies cookies.txt \
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             -g "$YOUTUBE_URL" | {
             read -r VIDEO_URL
