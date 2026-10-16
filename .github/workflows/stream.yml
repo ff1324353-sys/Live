@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies (Chromium, FFmpeg, Xvfb, Alsa)
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -25,25 +25,24 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          # 1. Start Virtual Framebuffer (Xvfb) on display :99 with HD resolution
           Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
           export DISPLAY=:99
 
-          # 2. Start PulseAudio for sound handling
           pulseaudio --start || true
 
-          # 3. Open FanCode match URL in Chromium (Headless off, full screen / kiosk mode)
-          # Note: If login is required, we can add user data dir or let it load
+          # Added flags to bypass terms/first-run dialogs and enable autoplay
           chromium-browser \
             --no-sandbox \
             --disable-gpu \
             --window-size=1280,720 \
+            --no-first-run \
+            --no-default-browser-check \
+            --autoplay-policy=no-user-gesture-required \
+            --start-fullscreen \
             --kiosk "https://www.fancode.com/cricket/tour/world-championship-of-legends-2026-19879892/matches/australia-champions-vs-west-indies-champions-4249229/live-match-info" > /dev/null 2>&1 &
 
-          # Wait 10 seconds for browser to load the page and stream to start playing
-          sleep 10
+          sleep 12
 
-          # 4. Capture Virtual Screen (:99) and Audio using FFmpeg, apply Anti-Copyright filters, and push to Facebook RTMP
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
