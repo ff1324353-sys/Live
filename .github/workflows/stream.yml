@@ -1,4 +1,4 @@
-name: YT Embed Capture Restream to FB
+name: YT Live Screen Capture Restream
 
 on:
   workflow_dispatch:
@@ -19,8 +19,8 @@ jobs:
       - name: Start Browser & Stream Setup
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
-          # Using Embed URL to bypass Chat & YouTube Bot Sign-in Overlays cleanly
-          TARGET_URL: "https://www.youtube.com/embed/pMfYTkk4YRg?autoplay=1"
+          # Using direct watch URL to fix Error 153 embedding block
+          TARGET_URL: "https://www.youtube.com/watch?v=pMfYTkk4YRg"
         run: |
           # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
@@ -28,7 +28,7 @@ jobs:
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Chromium in Fullscreen Embed Mode
+          # 2. Launch Chromium with Real-User Flags to prevent Bot Checks & Chat-only view
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -39,16 +39,21 @@ jobs:
             --disable-blink-features=AutomationControlled \
             --autoplay-policy=no-user-gesture-required \
             --mute-audio=false \
-            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            --window-size=1280,720 \
+            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
-            --start-fullscreen \
-            --kiosk "${TARGET_URL}" &
+            "${TARGET_URL}" &
           
-          sleep 8
+          # Wait for YouTube video page to load
+          sleep 12
           
-          # 3. Inject JS to Unmute & Force Play Embed Video
+          # Press 'f' key using xdotool to make YouTube player Fullscreen automatically
+          xdotool key f
+          sleep 3
+
+          # 3. Inject JS to Unmute, Force Play and hide chat/overlays
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(2)
@@ -63,6 +68,11 @@ jobs:
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
+                  // Remove any sign-in dialogs or bot overlays
+                  const dialogs = document.querySelectorAll("ytd-enforcement-message-view-model, tp-yt-paper-dialog, #dismiss-button");
+                  dialogs.forEach(el => el.remove());
+                  
+                  // Force play & unmute
                   document.querySelectorAll("video").forEach(v => {
                       v.muted = false;
                       v.volume = 1.0;
@@ -72,14 +82,14 @@ jobs:
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("Embed Video Unmuted!")
+                  print("Video unmuted & bot checks cleared!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
           sleep 4
 
-          # 4. Capture Screen & PulseAudio Stream to FB Live
+          # 4. Capture Screen & Restream to FB Live
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
