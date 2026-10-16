@@ -1,4 +1,4 @@
-name: YT Live Undetected Screen Capture
+name: YT Restream Playwright Stealth
 
 on:
   workflow_dispatch:
@@ -10,68 +10,67 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Virtual Display, Browser, FFmpeg & Undetected Driver
+      - name: Install Virtual Display, Node & FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils python3-pip
-          pip3 install undetected-chromedriver websocket-client
+          sudo apt-get install -y xvfb ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils
+          npm install playwright extra-stealth-playwright playwright-extra
 
-      - name: Start Browser with Bot Bypass & Stream Setup
+      - name: Start Playwright Browser & Restream
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           TARGET_URL: "https://www.youtube.com/watch?v=pMfYTkk4YRg"
         run: |
-          # 1. Start Virtual Display & PulseAudio
+          # 1. Start Virtual Display & Audio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
           pulseaudio -D --exit-idle-time=-1
           sleep 3
 
-          # 2. Launch Undetected Chrome via Python script
-          python3 -c '
-          import undetected_chromedriver as uc
-          import time, os
+          # 2. Launch Stealth Playwright Node Script
+          node -e '
+          const { chromium } = require("playwright-extra");
+          const stealth = require("puppeteer-extra-plugin-stealth")();
+          chromium.use(stealth);
 
-          options = uc.ChromeOptions()
-          options.add_argument("--window-size=1280,720")
-          options.add_argument("--autoplay-policy=no-user-gesture-required")
-          options.add_argument("--no-first-run")
-          options.add_argument("--disable-infobars")
-          options.add_argument("--disable-popup-blocking")
+          (async () => {
+            const browser = await chromium.launch({
+              headless: false,
+              args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--autoplay-policy=no-user-gesture-required",
+                "--window-size=1280,720"
+              ]
+            });
+            const page = await browser.newPage();
+            await page.setViewportSize({ width: 1280, height: 720 });
+            await page.goto(process.env.TARGET_URL, { waitUntil: "domcontentloaded" });
+            
+            // Wait for player and handle popups/play
+            await page.waitForTimeout(10000);
+            
+            // Unmute & Play
+            await page.evaluate(() => {
+              const v = document.querySelector("video");
+              if (v) { v.muted = false; v.volume = 1.0; v.play(); }
+            });
 
-          driver = uc.Chrome(options=options, version_main=120)
-          driver.get("'"${TARGET_URL}"'")
-          
-          time.sleep(10)
-
-          # Auto click dismiss / play if needed and toggle fullscreen
-          try:
-              # Click dismiss or close overlay if exists
-              driver.execute_script("""
-                  const btn = document.querySelector("#dismiss-button, tp-yt-paper-button");
-                  if(btn) btn.click();
-                  
-                  const v = document.querySelector("video");
-                  if(v) { v.muted = false; v.volume = 1.0; v.play(); }
-              """)
-          except Exception as e:
-              print("Script error:", e)
-
-          # Keep driver alive in background
-          time.sleep(3600)
+            // Keep browser alive
+            await new Promise(() => {});
+          })();
           ' &
 
           sleep 15
           
-          # Press 'f' key using xdotool to make player Fullscreen
+          # Toggle Fullscreen view
           xdotool key f
           sleep 3
 
-          # 3. Capture Screen & Restream to FB Live
+          # 3. Capture Screen & Stream to FB Live
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
           -f pulse -i default \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
           -max_interleave_delta 0 \
           -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-          
