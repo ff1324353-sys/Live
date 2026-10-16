@@ -1,4 +1,4 @@
-name: StreamX Crop & Restream to FB
+name: Telegram Live Stream Bot (YouTube WCL)
 
 on:
   workflow_dispatch:
@@ -16,21 +16,15 @@ jobs:
           sudo apt-get install -y xvfb chromium-browser ffmpeg fonts-dejavu-core pulseaudio xdotool alsa-utils jq python3-pip
           pip3 install websocket-client
 
-      - name: Start Browser & Stream Setup
-        env:
-          FB_KEY: ${{ secrets.FB_KEY }}
-          TARGET_URL: "https://www.streamx.website/match.html?id=EvI-2026-09&title=LIVE%20-%20Pakistan%20Womens%20Under%2019s%20T20%20Tri%20Series%202026"
+      - name: Start Live Stream Setup
         run: |
-          # 1. Set Timezone to Sri Lanka (Asia/Colombo) so countdown matches correctly
-          sudo timedatectl set-timezone Asia/Colombo
-
-          # 2. Start Virtual Display & PulseAudio
+          # 1. Start Virtual Display & PulseAudio
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
-          pulseaudio -D --exit-idle-time=-1
+          pulseaudio -D --exit-idle-time=-1 || true
           sleep 3
 
-          # 3. Launch Chromium pointing to your website match page
+          # 2. Launch Chromium with WCL YouTube Embed Link
           chromium-browser \
             --no-sandbox \
             --disable-setuid-sandbox \
@@ -44,13 +38,14 @@ jobs:
             --remote-debugging-port=9222 \
             --remote-allow-origins=* \
             --disable-dev-shm-usage \
-            --window-size=1280,720 \
-            "${TARGET_URL}" &
+            --start-fullscreen \
+            --kiosk "https://www.youtube.com/embed/n3qodO8ER_4?autoplay=1" &
           
-          # Wait for website page to load
-          sleep 10
+          sleep 12
+          xdotool key Escape
+          sleep 2
           
-          # 4. Inject JS to type Username, click Enter Live Room, and unmute video
+          # 3. Inject JS to Unmute & Force Play Video
           python3 -c '
           import urllib.request, json, time, websocket
           time.sleep(3)
@@ -59,52 +54,34 @@ jobs:
               targets = json.loads(response.read().decode())
               ws_url = None
               for t in targets:
-                  if "streamx.website" in t.get("url", ""):
-                      ws_url = t.get("webSocketDebuggerUrl")
-                      break
+                  ws_url = t.get("webSocketDebuggerUrl")
+                  break
               if ws_url:
                   ws = websocket.create_connection(ws_url)
                   js_code = """
-                  // Fill input box if present
-                  const input = document.querySelector("input[type=\\x27text\\x27], input[placeholder*=\\x27Username\\x27]");
-                  if (input) {
-                      input.value = "LiveUser";
-                      input.dispatchEvent(new Event("input", { bubbles: true }));
+                  // Unmute and Play Video
+                  const video = document.querySelector("video");
+                  if (video) {
+                      video.muted = false;
+                      video.volume = 1.0;
+                      video.play().catch(e => console.log(e));
                   }
-                  
-                  // Click Enter Live Room button
-                  const buttons = Array.from(document.querySelectorAll("button, input[type=\\x27submit\\x27]"));
-                  const enterBtn = buttons.find(b => b.innerText.includes("Enter") || b.value.includes("Enter"));
-                  if (enterBtn) {
-                      enterBtn.click();
-                  }
-
-                  // Force play & unmute all videos after popup is dismissed
-                  setTimeout(() => {
-                      document.querySelectorAll("video").forEach(v => {
-                          v.muted = false;
-                          v.volume = 1.0;
-                          v.play().catch(err => console.log(err));
-                      });
-                  }, 2000);
                   """
                   msg = json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": js_code}})
                   ws.send(msg)
                   ws.close()
-                  print("Popup bypassed and video played!")
+                  print("WCL YouTube Embed Unmuted & Playing!")
           except Exception as e:
               print("JS error:", e)
           ' || true
 
-          sleep 6
+          sleep 5
 
-          # 5. Capture Screen with FFmpeg, Crop only to Video Player box, and Restream to Facebook
-          # crop=width:height:x:y (Adjusted to capture the exact video player area)
+          # 4. Capture Screen & Stream to Telegram Live RTMP
           ffmpeg -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99.0 \
-          -f pulse -i default \
-          -filter:v "crop=900:506:190:130,scale=1280:720" \
-          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -g 60 -r 30 -c:a aac -b:a 128k -ar 44100 \
-          -max_interleave_delta 0 \
-          -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
+          -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+          -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
+          -c:a aac -b:a 128k -ar 44100 -ac 2 \
+          -flvflags no_duration_filesize \
+          -f flv "rtmps://dc5-1.rtmp.t.me/s/5471975795:vXuLHRfeef_dt6l9Oh6YPw"
           
