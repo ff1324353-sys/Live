@@ -31,13 +31,11 @@ jobs:
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
-          # 1. Start Virtual Framebuffer
           Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
           export DISPLAY=:99
 
           pulseaudio --start || true
 
-          # 2. Write Puppeteer Script
           cat << 'EOF' > launch.js
           const puppeteer = require('puppeteer-core');
 
@@ -59,7 +57,6 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Create simple HTML player for M3U8 Stream
             const playerHtml = `
               <!DOCTYPE html>
               <html>
@@ -94,24 +91,19 @@ jobs:
             `;
 
             await page.setContent(playerHtml);
-            console.log("Player Loaded and Video Playing!");
           })();
           EOF
 
-          # Run Puppeteer script in background
           node launch.js > /dev/null 2>&1 &
-
-          # Wait for stream to load
           sleep 10
 
-          # 3. Capture Screen & Stream to FB Live with Copyright Filters
+          # Top crop (50px) සහ Willow Logo එක සම්පූර්ණයෙන්ම වසන Black Overlay Box එක
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text='RANUWA LIVE':x=w-tw-30:y=30:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=8[v]; [1:a]asetrate=44100*1.01,aresample=44100[a]" \
+            -filter_complex "[0:v]crop=in_w:in_h-50:0:50,scale=1280:720,eq=brightness=0.03:saturation=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=10:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*1.01,aresample=44100[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-            
