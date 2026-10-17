@@ -1,4 +1,4 @@
-name: Facebook Live Stream via FB Page Capture (Geo-Bypass)
+name: Facebook Live Stream via Cookies & Chromium Capture
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies & Tools
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -22,38 +22,48 @@ jobs:
             xdotool \
             fonts-dejavu-core
 
-      - name: Start Virtual Display & Stream FB Video to FB Live
+      - name: Setup Profile & Inject Cookies
+        env:
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}
+        run: |
+          mkdir -p /tmp/chrome-profile
+          # Save cookies to a file temporarily
+          printf "%s\n" "$FB_COOKIES" > /tmp/cookies.txt
+
+      - name: Start Virtual Display & Stream to Facebook
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}
         run: |
+          # Write cookies again for runtime
+          printf "%s\n" "$FB_COOKIES" > /tmp/cookies.txt
+
           # 1. Start Virtual Framebuffer
           Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
           export DISPLAY=:99
 
           pulseaudio --start || true
 
-          # 2. Open FB Live Video Link in Chromium
-          # Flags used to disable security blocks, handle geo/autoplay & first-run setup
+          # 2. Open Chromium with custom flags
           chromium-browser \
             --no-sandbox \
             --disable-gpu \
+            --user-data-dir=/tmp/chrome-profile \
             --window-size=1280,720 \
             --no-first-run \
             --no-default-browser-check \
             --autoplay-policy=no-user-gesture-required \
-            --disable-web-security \
-            --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
             --start-fullscreen \
             --kiosk "https://www.facebook.com/100095151165633/videos/1101080645849720/?mibextid=rS40aB7S9Ucbxw6v" > /dev/null 2>&1 &
 
-          # Wait 15 seconds for Facebook page to fully render
-          sleep 15
+          # Wait for browser to load page with cookies
+          sleep 12
 
-          # Auto click center to trigger play on Facebook Player
+          # Auto click center to trigger play
           xdotool mousemove 640 360 click 1
           sleep 3
 
-          # 3. Stream with Watermark & Audio Pitch Filters
+          # 3. Stream to Facebook Live with Anti-Copyright Filters
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
