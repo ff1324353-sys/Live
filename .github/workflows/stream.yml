@@ -1,4 +1,4 @@
-name: Facebook Live Stream via Cookies & Chromium Capture
+name: Facebook Live Stream via Puppeteer & Cookies
 
 on:
   workflow_dispatch:
@@ -10,7 +10,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies & Puppeteer
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -19,51 +24,84 @@ jobs:
             xvfb \
             pulseaudio \
             alsa-utils \
-            xdotool \
             fonts-dejavu-core
+          npm install puppeteer-core
 
-      - name: Setup Profile & Inject Cookies
-        env:
-          FB_COOKIES: ${{ secrets.FB_COOKIES }}
-        run: |
-          mkdir -p /tmp/chrome-profile
-          # Save cookies to a file temporarily
-          printf "%s\n" "$FB_COOKIES" > /tmp/cookies.txt
-
-      - name: Start Virtual Display & Stream to Facebook
+      - name: Start Virtual Display & Launch Puppeteer
         env:
           FB_KEY: ${{ secrets.FB_KEY }}
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
         run: |
-          # Write cookies again for runtime
-          printf "%s\n" "$FB_COOKIES" > /tmp/cookies.txt
-
           # 1. Start Virtual Framebuffer
           Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
           export DISPLAY=:99
 
           pulseaudio --start || true
 
-          # 2. Open Chromium with custom flags
-          chromium-browser \
-            --no-sandbox \
-            --disable-gpu \
-            --user-data-dir=/tmp/chrome-profile \
-            --window-size=1280,720 \
-            --no-first-run \
-            --no-default-browser-check \
-            --autoplay-policy=no-user-gesture-required \
-            --start-fullscreen \
-            --kiosk "https://www.facebook.com/100095151165633/videos/1101080645849720/?mibextid=rS40aB7S9Ucbxw6v" > /dev/null 2>&1 &
+          # 2. Write Puppeteer Script to Inject Cookies & Navigate
+          cat << 'EOF' > launch.js
+          const puppeteer = require('puppeteer-core');
+          const fs = require('fs');
 
-          # Wait for browser to load page with cookies
-          sleep 12
+          (async () => {
+            const browser = await puppeteer.launch({
+              executablePath: '/usr/bin/chromium-browser',
+              headless: false,
+              args: [
+                '--no-sandbox',
+                '--disable-gpu',
+                '--window-size=1280,720',
+                '--autoplay-policy=no-user-gesture-required',
+                '--start-fullscreen'
+              ]
+            });
 
-          # Auto click center to trigger play
-          xdotool mousemove 640 360 click 1
-          sleep 3
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 720 });
 
-          # 3. Stream to Facebook Live with Anti-Copyright Filters
+            // Parse Netscape Cookies
+            const cookieRaw = process.env.FB_COOKIES || '';
+            const lines = cookieRaw.split('\n');
+            const cookies = [];
+
+            for (let line of lines) {
+              line = line.trim();
+              if (!line || line.startsWith('#')) continue;
+              const parts = line.split('\t');
+              if (parts.length >= 7) {
+                cookies.push({
+                  name: parts[5],
+                  value: parts[6],
+                  domain: parts[0].startsWith('.') ? parts[0] : '.' + parts[0],
+                  path: parts[2],
+                  secure: parts[3] === 'TRUE',
+                  httpOnly: false
+                });
+              }
+            }
+
+            if (cookies.length > 0) {
+              await page.setCookie(...cookies);
+              console.log('Cookies injected successfully!');
+            }
+
+            // Go to restricted FB Video
+            await page.goto('https://www.facebook.com/100095151165633/videos/1101080645849720/?mibextid=rS40aB7S9Ucbxw6v', {
+              waitUntil: 'networkidle2'
+            });
+
+            // Click center to ensure playback
+            await page.waitForTimeout(5000);
+            await page.mouse.click(640, 360);
+          })();
+          EOF
+
+          # Run Puppeteer script in background
+          node launch.js > /dev/null 2>&1 &
+
+          sleep 15
+
+          # 3. Stream Virtual Screen to Facebook Live
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
