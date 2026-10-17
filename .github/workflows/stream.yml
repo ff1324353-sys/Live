@@ -1,4 +1,4 @@
-name: Facebook Live Stream via Puppeteer & Cookies
+name: Facebook Live Stream via Puppeteer (Fixed Rendering)
 
 on:
   workflow_dispatch:
@@ -38,10 +38,9 @@ jobs:
 
           pulseaudio --start || true
 
-          # 2. Write Puppeteer Script to Inject Cookies & Navigate
+          # 2. Write Puppeteer Script
           cat << 'EOF' > launch.js
           const puppeteer = require('puppeteer-core');
-          const fs = require('fs');
 
           (async () => {
             const browser = await puppeteer.launch({
@@ -49,15 +48,21 @@ jobs:
               headless: false,
               args: [
                 '--no-sandbox',
+                '--disable-setuid-sandbox',
                 '--disable-gpu',
+                '--disable-software-rasterizer',
                 '--window-size=1280,720',
                 '--autoplay-policy=no-user-gesture-required',
-                '--start-fullscreen'
+                '--start-fullscreen',
+                '--disable-blink-features=AutomationControlled'
               ]
             });
 
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
+
+            // Set Realistic User Agent
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
 
             // Parse Netscape Cookies
             const cookieRaw = process.env.FB_COOKIES || '';
@@ -85,13 +90,15 @@ jobs:
               console.log('Cookies injected successfully!');
             }
 
-            // Go to restricted FB Video
-            await page.goto('https://www.facebook.com/100095151165633/videos/1101080645849720/?mibextid=rS40aB7S9Ucbxw6v', {
+            // Go to FB Video Page
+            await page.goto('https://www.facebook.com/100095151165633/videos/1101080645849720/', {
               waitUntil: 'networkidle2'
             });
 
-            // Click center to ensure playback
-            await page.waitForTimeout(5000);
+            // Wait 8s for media player to load
+            await new Promise(r => setTimeout(r, 8000));
+
+            // Click play button or center
             await page.mouse.click(640, 360);
           })();
           EOF
@@ -101,7 +108,7 @@ jobs:
 
           sleep 15
 
-          # 3. Stream Virtual Screen to Facebook Live
+          # 3. Stream Virtual Display to FB Live
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
