@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies (Fix Chromium Issue)
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -23,10 +23,7 @@ jobs:
             xvfb \
             pulseaudio \
             alsa-utils \
-            fonts-dejavu-core \
-            chromium-browser-l10n || true
-          
-          # Install Puppeteer with built-in Chromium
+            fonts-dejavu-core
           npm install puppeteer
 
       - name: Start Virtual Display & Launch Puppeteer
@@ -51,42 +48,65 @@ jobs:
                 '--window-size=1280,720',
                 '--autoplay-policy=no-user-gesture-required',
                 '--start-fullscreen',
-                '--disable-blink-features=AutomationControlled'
+                '--block-new-web-contents', // Blocks Pop-up Ads
+                '--disable-popup-blocking=false'
               ]
             });
 
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // 1. Go to Touchcric Page
+            // Block new tabs/windows created by ads
+            browser.on('targetcreated', async (target) => {
+              if (target.type() === 'page') {
+                const newPage = await target.page();
+                if (newPage && newPage !== page) {
+                  await newPage.close();
+                }
+              }
+            });
+
+            // Navigate to Touchcric
             await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
-            // 2. Wait for page load
             await new Promise(r => setTimeout(r, 6000));
 
-            // 3. Remove Ads & Auto Play Video
+            // Force Video AutoPlay without clicking
             await page.evaluate(() => {
-              const ads = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"]');
-              ads.forEach(ad => ad.remove());
+              // Override window.open to prevent popup ads
+              window.open = function() { return null; };
 
+              // Remove ad overlays covering the video player
+              const elements = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"], div[style*="z-index"]');
+              elements.forEach(el => {
+                if (!el.contains(document.querySelector('video'))) {
+                  el.remove();
+                }
+              });
+
+              // Play video programmatically
               const video = document.querySelector('video');
               if (video) {
                 video.muted = false;
                 video.volume = 1.0;
-                video.play();
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(() => {
+                    video.muted = true;
+                    video.play();
+                  });
+                }
               }
             });
-
-            await page.mouse.click(640, 360);
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
-          sleep 15
+          sleep 12
 
-          # Full Screen Capture + Reconnect Fix + Watermark
+          # Full Browser Capture + Anti-Copyright Filters + Reconnect
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
