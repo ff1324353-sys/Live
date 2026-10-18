@@ -57,12 +57,10 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Touchcric Match Page URL
             await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
-            // Player load ani auto-play settings
             await new Promise(r => setTimeout(r, 6000));
             await page.mouse.click(640, 360);
           })();
@@ -71,14 +69,15 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # FFmpeg Capture with Video Filters, Lower Audio Pitch & Watermark Box
+          # Full Browser Capture (No Crop) with Reconnect Fix
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
-            -filter_complex "[0:v]crop=in_w:in_h-50:0:50,scale=1280:720,eq=brightness=0.02:contrast=1.2:saturation=1.4:gamma=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=60:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.7[a]" \
+            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.02:contrast=1.2:saturation=1.4:gamma=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=60:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.9[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
+            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
             
