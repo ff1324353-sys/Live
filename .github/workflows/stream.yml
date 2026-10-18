@@ -1,4 +1,4 @@
-name: Stream Willow HD via Chromium Capture
+name: Stream Touchcric Match via Chromium Capture
 
 on:
   workflow_dispatch:
@@ -57,49 +57,21 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            const playerHtml = `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <style>
-                  body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
-                  video { width: 100vw; height: 100vh; object-fit: cover; }
-                </style>
-                <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-              </head>
-              <body>
-                <video id="video" autoplay controls></video>
-                <script>
-                  var video = document.getElementById('video');
-                  video.muted = false;
-                  video.volume = 0.5;
-                  var videoSrc = 'https://tvsen5.aynaott.com/willowhd/index.m3u8';
-                  if (Hls.isSupported()) {
-                    var hls = new Hls();
-                    hls.loadSource(videoSrc);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                      video.play();
-                    });
-                  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = videoSrc;
-                    video.addEventListener('loadedmetadata', function() {
-                      video.play();
-                    });
-                  }
-                </script>
-              </body>
-              </html>
-            `;
+            // Touchcric Match Page URL
+            await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
+              waitUntil: 'networkidle2'
+            });
 
-            await page.setContent(playerHtml);
+            // Player load ani auto-play settings
+            await new Promise(r => setTimeout(r, 6000));
+            await page.mouse.click(640, 360);
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # FFmpeg Capture with Video Colour Adjustments, Lower Audio Pitch & Lowered Logo Position
+          # FFmpeg Capture with Video Filters, Lower Audio Pitch & Watermark Box
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
