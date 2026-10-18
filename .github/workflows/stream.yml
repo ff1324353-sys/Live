@@ -1,4 +1,4 @@
-name: Stream Touchcric Match via Chromium Capture
+name: Stream Astrocric via Chromium Capture
 
 on:
   workflow_dispatch:
@@ -51,7 +51,6 @@ jobs:
                 '--disable-gpu',
                 '--window-size=1280,720',
                 '--autoplay-policy=no-user-gesture-required',
-                '--start-fullscreen',
                 '--disable-popup-blocking'
               ]
             });
@@ -59,7 +58,7 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Block Ads and Extra Tabs
+            // බ්‍රවුසර් එකේ ඕනෑම නව Tab එකක් හෝ Pop-up එකක් විවෘත වීම වළක්වයි
             browser.on('targetcreated', async (target) => {
               if (target.type() === 'page') {
                 const newPage = await target.page();
@@ -69,14 +68,27 @@ jobs:
               }
             });
 
-            await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
+            // Astrocric Player Page එකට පිවිසීම
+            await page.goto('https://playsza.st/player.php?id=astrocric', {
               waitUntil: 'networkidle2'
             });
 
-            await new Promise(r => setTimeout(r, 8000));
+            // Page එක සම්පූර්ණයෙන්ම Load වීමට තත්පර කිහිපයක් රැඳීම
+            await new Promise(r => setTimeout(r, 6000));
 
-            await page.evaluate(() => {
+            // Ads වලින් වැළකී Video එක Play කිරීම සහ Unmute කිරීම
+            await page.evaluate(async () => {
+              // වින්ඩෝස් ඕපන් වීම නවත්වයි
               window.open = function() { return null; };
+
+              // මුලින්ම පෙනෙන Mute / Click to Unmute / Play බටන් ක්ලික් කිරීම
+              const clickElements = document.querySelectorAll('div, button, span, video');
+              for (let el of clickElements) {
+                if (el.innerText && (el.innerText.includes('UNMUTE') || el.innerText.includes('CLICK'))) {
+                  el.click();
+                }
+              }
+
               const video = document.querySelector('video');
               if (video) {
                 video.muted = false;
@@ -84,22 +96,24 @@ jobs:
                 video.play();
               }
             });
+
+            // තවත් තත්පර කිහිපයක් දී ස්ථාවර කරගැනීම
+            await new Promise(r => setTimeout(r, 5000));
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
           sleep 15
 
-          # Original Crop Size + Color Grade Shift + Logo Cover Box + Semi-Transparent Watermark
+          # Video Crop, Color Filters, Watermark & Audio Mix
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]crop=700:410:290:170,scale=1280:720,eq=brightness=0.06:contrast=1.3:saturation=1.55:gamma=1.25,hue=h=5:s=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-20:y=20:fontsize=34:fontcolor=yellow:box=1:boxcolor=black@0.9:boxborderw=20,drawtext=text=' LIVE MATCH UPDATES ':x=(w-tw)/2:y=h-60:fontsize=28:fontcolor=white@0.4:box=1:boxcolor=black@0.2:boxborderw=10[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.75[main_audio]; [2:a]volume=0.15[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=700:410:290:170,scale=1280:720,eq=brightness=0.06:contrast=1.3:saturation=1.55:gamma=1.25,drawtext=text=' RANUWA LIVE ':x=w-tw-20:y=20:fontsize=34:fontcolor=yellow:box=1:boxcolor=black@0.9:boxborderw=20,drawtext=text=' LIVE MATCH UPDATES ':x=(w-tw)/2:y=h-60:fontsize=28:fontcolor=white@0.4:box=1:boxcolor=black@0.2:boxborderw=10[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.75[main_audio]; [2:a]volume=0.15[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2300k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-            
