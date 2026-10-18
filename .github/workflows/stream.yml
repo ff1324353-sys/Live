@@ -28,7 +28,11 @@ jobs:
             -filter_complex \
             "[0:v]crop=iw*0.86:ih*0.86:iw*0.07:ih*0.07, \
              scale=1280:720, \
+             fps=29.97, \
+             noise=alls=3:allf=t+u, \
              eq=brightness=0.06:contrast=1.35:saturation=1.5:gamma=1.2, \
+             colorbalance=rs=0.05:gs=-0.03:bs=0.08, \
+             vignette='PI/4 + sin(t/2)*0.05', \
              unsharp=5:5:1.0:5:5:0.0, \
              drawbox=x=0:y=0:w=iw:h=18:color=black@1.0:t=fill, \
              drawbox=x=0:y=ih-18:w=iw:h=18:color=black@1.0:t=fill, \
@@ -36,9 +40,9 @@ jobs:
              drawbox=x=980:y=20:w=280:h=50:color=gold@1.0:t=4, \
              drawtext=text='RANU JR LIVE':x=995:y=31:fontsize=24:fontcolor=white:enable='gt(mod(t,12),4)', \
              drawtext=text='MATCH UPDATES':x='(w-tw)/2':y='h-th-25':fontsize=22:fontcolor=yellow@0.9:box=1:boxcolor=black@0.7:boxborderw=6[v]; \
-             [0:a]asetrate=44100*0.94,aresample=44100,volume=0.85,equalizer=f=1000:width_type=h:width=200:g=-3[main_audio]; \
+             [0:a]highpass=f=100,lowpass=f=14000,asetrate=44100*0.94,atempo=1.02,aresample=44100,volume=0.85,equalizer=f=1000:width_type=h:width=200:g=-3[main_audio]; \
              [1:a]volume=0.18[bg_audio]; \
-             [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+             [main_audio][bg_audio]amix=inputs=2:duration=first,aecho=0.8:0.88:60:0.3[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2300k -maxrate 2600k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
