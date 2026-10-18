@@ -15,17 +15,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies & Puppeteer
+      - name: Install Dependencies (Fix Chromium Issue)
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             ffmpeg \
-            chromium-browser \
             xvfb \
             pulseaudio \
             alsa-utils \
-            fonts-dejavu-core
-          npm install puppeteer-core
+            fonts-dejavu-core \
+            chromium-browser-l10n || true
+          
+          # Install Puppeteer with built-in Chromium
+          npm install puppeteer
 
       - name: Start Virtual Display & Launch Puppeteer
         env:
@@ -37,11 +39,10 @@ jobs:
           pulseaudio --start || true
 
           cat << 'EOF' > launch.js
-          const puppeteer = require('puppeteer-core');
+          const puppeteer = require('puppeteer');
 
           (async () => {
             const browser = await puppeteer.launch({
-              executablePath: '/usr/bin/chromium-browser',
               headless: false,
               args: [
                 '--no-sandbox',
@@ -63,15 +64,13 @@ jobs:
             });
 
             // 2. Wait for page load
-            await new Promise(r => setTimeout(r, 5000));
+            await new Promise(r => setTimeout(r, 6000));
 
-            // 3. Close Ads / Unmute & Trigger Video Play via JS
+            // 3. Remove Ads & Auto Play Video
             await page.evaluate(() => {
-              // Remove overlays/ads if present
               const ads = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"]');
               ads.forEach(ad => ad.remove());
 
-              // Find video element and play
               const video = document.querySelector('video');
               if (video) {
                 video.muted = false;
@@ -80,13 +79,12 @@ jobs:
               }
             });
 
-            // Fallback click in player center
             await page.mouse.click(640, 360);
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
-          sleep 12
+          sleep 15
 
           # Full Screen Capture + Reconnect Fix + Watermark
           ffmpeg -y \
