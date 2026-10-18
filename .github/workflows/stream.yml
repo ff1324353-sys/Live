@@ -32,9 +32,9 @@ jobs:
              unsharp=5:5:1.0:5:5:0.0, \
              drawbox=x=0:y=0:w=iw:h=18:color=black@1.0:t=fill, \
              drawbox=x=0:y=ih-18:w=iw:h=18:color=black@1.0:t=fill, \
-             drawbox=x=20:y=20:w=260:h=50:color=red@0.85:t=fill, \
-             drawbox=x=20:y=20:w=260:h=50:color=gold@1.0:t=4, \
-             drawtext=text='RANU JR LIVE':x=35:y=31:fontsize=24:fontcolor=white:enable='gt(mod(t,12),4)', \
+             drawbox=x=980:y=20:w=280:h=50:color=red@0.85:t=fill, \
+             drawbox=x=980:y=20:w=280:h=50:color=gold@1.0:t=4, \
+             drawtext=text='RANU JR LIVE':x=995:y=31:fontsize=24:fontcolor=white:enable='gt(mod(t,12),4)', \
              drawtext=text='MATCH UPDATES':x='(w-tw)/2':y='h-th-25':fontsize=22:fontcolor=yellow@0.9:box=1:boxcolor=black@0.7:boxborderw=6[v]; \
              [0:a]asetrate=44100*0.94,aresample=44100,volume=0.85,equalizer=f=1000:width_type=h:width=200:g=-3[main_audio]; \
              [1:a]volume=0.18[bg_audio]; \
