@@ -26,7 +26,7 @@ jobs:
             fonts-dejavu-core
           npm install puppeteer
           
-          # Royalty-free background music download karaganeema
+          # Musica di sottofondo per evitare il rilevamento del copyright
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
@@ -58,14 +58,24 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Target match page
+            // Blocco delle nuove finestre/tab generate dalla pubblicità
+            browser.on('targetcreated', async (target) => {
+              if (target.type() === 'page') {
+                const newPage = await target.page();
+                if (newPage && newPage !== page) {
+                  await newPage.close();
+                }
+              }
+            });
+
+            // Pagina della partita
             await page.goto('https://new.touchcric.com/watch-pakistan-vs-sri-lanka-1st-odi-tri-series-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
             await new Promise(r => setTimeout(r, 6000));
 
-            // Force unmute & play video
+            // Disattivazione del Mute e blocco pop-up senza effettuare click
             await page.evaluate(() => {
               window.open = function() { return null; };
 
@@ -73,21 +83,15 @@ jobs:
               if (video) {
                 video.muted = false;
                 video.volume = 1.0;
-                video.play();
               }
             });
-
-            // Player eke center ekata double click karala Unmute confirm karima
-            await page.mouse.click(640, 360);
-            await new Promise(r => setTimeout(r, 1000));
-            await page.mouse.click(640, 360);
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # FFmpeg with Strong Color Adjustments, Gamma Shift, Audio Pitch & Background Music (No Video Mirroring)
+          # Ritaglio video (700x410) + Filtri colore/audio + Musica di sottofondo
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
@@ -99,4 +103,3 @@ jobs:
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-            
