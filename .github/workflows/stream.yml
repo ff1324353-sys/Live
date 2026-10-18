@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Download Background Audio
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -25,6 +25,9 @@ jobs:
             alsa-utils \
             fonts-dejavu-core
           npm install puppeteer
+          
+          # Royalty-free background music labɛnnin
+          curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
         env:
@@ -55,62 +58,48 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Block new tabs/windows created by ads
-            browser.on('targetcreated', async (target) => {
-              if (target.type() === 'page') {
-                const newPage = await target.page();
-                if (newPage && newPage !== page) {
-                  await newPage.close();
-                }
-              }
-            });
-
-            // Navigate to New Pakistan vs Sri Lanka Match Link
+            // Target page navigation
             await page.goto('https://new.touchcric.com/watch-pakistan-vs-sri-lanka-1st-odi-tri-series-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
             await new Promise(r => setTimeout(r, 6000));
 
-            // Force Video AutoPlay without clicking
+            // Unmute & Auto-Play logic
             await page.evaluate(() => {
               window.open = function() { return null; };
 
-              const elements = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"]');
-              elements.forEach(el => {
-                if (!el.contains(document.querySelector('video'))) {
-                  el.remove();
-                }
-              });
+              // Automatic click for "Tap to Unmute" button
+              const unmuteBtn = document.querySelector('.vjs-big-play-button, .unmute-button, div[class*="unmute"]');
+              if (unmuteBtn) {
+                unmuteBtn.click();
+              }
 
               const video = document.querySelector('video');
               if (video) {
                 video.muted = false;
                 video.volume = 1.0;
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                  playPromise.catch(() => {
-                    video.muted = true;
-                    video.play();
-                  });
-                }
+                video.play();
               }
             });
+
+            // Fallback click on video player center to guarantee Unmute
+            await page.mouse.click(640, 360);
           })();
           EOF
 
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # Exact Video Player Crop (700x410) -> Rescaled to 1280x720 Full Screen + Filters
+          # FFmpeg with Video Mirroring, Speed Shift, Color Modification & Background Music Overlay
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
-            -filter_complex "[0:v]crop=700:410:290:170,scale=1280:720,eq=brightness=0.02:contrast=1.2:saturation=1.4:gamma=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.9[a]" \
+            -stream_loop -1 -i bgmusic.mp3 \
+            -filter_complex "[0:v]crop=700:410:290:170,hflip,setpts=0.98*PTS,scale=1280:720,eq=brightness=0.03:contrast=1.25:saturation=1.45:gamma=1.15,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.93,aresample=44100,volume=0.8[main_audio]; [2:a]volume=0.15[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
-            
