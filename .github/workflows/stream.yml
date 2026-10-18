@@ -69,7 +69,7 @@ jobs:
               }
             });
 
-            await page.goto('https://new.touchcric.com/watch-pakistan-vs-sri-lanka-1st-odi-tri-series-live-cricket-streaming.htm', {
+            await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
