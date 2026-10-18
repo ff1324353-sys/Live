@@ -48,8 +48,7 @@ jobs:
                 '--window-size=1280,720',
                 '--autoplay-policy=no-user-gesture-required',
                 '--start-fullscreen',
-                '--block-new-web-contents', // Blocks Pop-up Ads
-                '--disable-popup-blocking=false'
+                '--block-new-web-contents'
               ]
             });
 
@@ -66,8 +65,8 @@ jobs:
               }
             });
 
-            // Navigate to Touchcric
-            await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
+            // Navigate to New Pakistan vs Sri Lanka Match Link
+            await page.goto('https://new.touchcric.com/watch-pakistan-vs-sri-lanka-1st-odi-tri-series-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
@@ -75,18 +74,15 @@ jobs:
 
             // Force Video AutoPlay without clicking
             await page.evaluate(() => {
-              // Override window.open to prevent popup ads
               window.open = function() { return null; };
 
-              // Remove ad overlays covering the video player
-              const elements = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"], div[style*="z-index"]');
+              const elements = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"]');
               elements.forEach(el => {
                 if (!el.contains(document.querySelector('video'))) {
                   el.remove();
                 }
               });
 
-              // Play video programmatically
               const video = document.querySelector('video');
               if (video) {
                 video.muted = false;
@@ -106,11 +102,11 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # Full Browser Capture + Anti-Copyright Filters + Reconnect
+          # Exact Video Player Crop (700x410) -> Rescaled to 1280x720 Full Screen + Filters
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.02:contrast=1.2:saturation=1.4:gamma=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=60:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.9[a]" \
+            -filter_complex "[0:v]crop=700:410:290:170,scale=1280:720,eq=brightness=0.02:contrast=1.2:saturation=1.4:gamma=1.1,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.95,aresample=44100,volume=0.9[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
