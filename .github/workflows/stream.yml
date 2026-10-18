@@ -13,9 +13,9 @@ jobs:
       - name: Install FFmpeg & Download Crowd Audio
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
           
-          # Audience / Stadium Crowd Noise Audio Track
+          # Crowd Noise Audio Track
           curl -L -o crowd_noise.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
       - name: Start Streaming to Facebook Live
@@ -34,7 +34,7 @@ jobs:
              drawbox=x=0:y=ih-18:w=iw:h=18:color=black@1.0:t=fill, \
              drawbox=x=20:y=20:w=260:h=50:color=red@0.85:t=fill, \
              drawbox=x=20:y=20:w=260:h=50:color=gold@1.0:t=4, \
-             drawtext=text='RANU JR LIVE':x=35:y=30:fontsize=26:fontcolor=white:fontweight=bold:enable='gt(mod(t,12),4)', \
+             drawtext=text='RANU JR LIVE':x=35:y=31:fontsize=24:fontcolor=white:enable='gt(mod(t,12),4)', \
              drawtext=text='MATCH UPDATES':x='(w-tw)/2':y='h-th-25':fontsize=22:fontcolor=yellow@0.9:box=1:boxcolor=black@0.7:boxborderw=6[v]; \
              [0:a]asetrate=44100*0.94,aresample=44100,volume=0.85,equalizer=f=1000:width_type=h:width=200:g=-3[main_audio]; \
              [1:a]volume=0.18[bg_audio]; \
