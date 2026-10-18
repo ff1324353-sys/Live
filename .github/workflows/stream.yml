@@ -57,11 +57,30 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
+            // 1. Go to Touchcric Page
             await page.goto('https://new.touchcric.com/watch-south-africa-vs-australia-2nd-test-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
-            await new Promise(r => setTimeout(r, 6000));
+            // 2. Wait for page load
+            await new Promise(r => setTimeout(r, 5000));
+
+            // 3. Close Ads / Unmute & Trigger Video Play via JS
+            await page.evaluate(() => {
+              // Remove overlays/ads if present
+              const ads = document.querySelectorAll('iframe, div[id*="ad"], div[class*="ad"]');
+              ads.forEach(ad => ad.remove());
+
+              // Find video element and play
+              const video = document.querySelector('video');
+              if (video) {
+                video.muted = false;
+                video.volume = 1.0;
+                video.play();
+              }
+            });
+
+            // Fallback click in player center
             await page.mouse.click(640, 360);
           })();
           EOF
@@ -69,7 +88,7 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 12
 
-          # Full Browser Capture (No Crop) with Reconnect Fix
+          # Full Screen Capture + Reconnect Fix + Watermark
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
