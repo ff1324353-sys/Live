@@ -23,13 +23,14 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
           ffmpeg -y \
+            -rw_timeout 15000000 \
             -re -i "https://tvsen5.aynascope.net/willowhd/index.m3u8" \
             -stream_loop -1 -i crowd_noise.mp3 \
             -filter_complex \
             "[0:v]crop=iw*0.86:ih*0.86:iw*0.07:ih*0.07, \
              scale=1280:720, \
-             fps=29.97, \
-             noise=alls=3:allf=t+u, \
+             fps=25, \
+             noise=alls=2:allf=t+u, \
              eq=brightness=0.06:contrast=1.35:saturation=1.5:gamma=1.2, \
              colorbalance=rs=0.05:gs=-0.03:bs=0.08, \
              vignette='PI/4 + sin(t/2)*0.05', \
@@ -44,9 +45,9 @@ jobs:
              [1:a]volume=0.18[bg_audio]; \
              [main_audio][bg_audio]amix=inputs=2:duration=first,aecho=0.8:0.88:60:0.3[a]" \
             -map "[v]" -map "[a]" \
-            -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2300k -maxrate 2600k -bufsize 5000k \
+            -c:v libx264 -preset superfast -pix_fmt yuv420p -g 50 -b:v 1800k -maxrate 2000k -bufsize 4000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
-            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${FB_KEY}"
             
