@@ -23,7 +23,7 @@ jobs:
           FB_KEY: ${{ secrets.FB_KEY }}
         run: |
           ffmpeg -y \
-            -re -i "https://tvsen5.aynascope.net/willowhd/index.m3u8" \
+            -re -i "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8" \
             -stream_loop -1 -i crowd_noise.mp3 \
             -filter_complex \
             "[0:v]crop=iw*0.86:ih*0.86:iw*0.07:ih*0.07, \
