@@ -94,7 +94,7 @@ jobs:
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]crop=680:380:300:180,scale=1280:720,eq=brightness=0.08:contrast=1.4:saturation=1.65:gamma=1.35,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.93,aresample=44100,volume=0.85[main_audio]; [2:a]volume=0.12[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=680:380:300:180,scale=1280:720,eq=brightness=0.08:contrast=1.4:saturation=0.75:gamma=1.55,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.93,aresample=44100,volume=0.85[main_audio]; [2:a]volume=0.12[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
