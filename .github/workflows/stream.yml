@@ -67,7 +67,7 @@ jobs:
             });
 
             // Pakistan vs England Match Page Link
-            await page.goto('https://new.touchcric.com/watch-pakistan-vs-england-tri-series-4th-match-live-cricket-streaming.htm', {
+            await page.goto('https://new.touchcric.com/watch-new-zealand-vs-india-3rd-t20-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
