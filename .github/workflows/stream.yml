@@ -1,4 +1,4 @@
-name: Stream Touchcric Match to YouTube via Chromium Capture
+name: Stream Touchcric Match to Facebook via Chromium Capture
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
             fonts-dejavu-core
           npm install puppeteer
           
-          # Background music for copyright protection
+          # Copyright වලින් ආරක්ෂා වීමට Background music එක ඩাউনলোড කරගැනීම
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
@@ -56,7 +56,7 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Block new popup tabs from ads
+            // Ad නිසා අලුතෙන් open වෙන tabs block කිරීම
             browser.on('targetcreated', async (target) => {
               if (target.type() === 'page') {
                 const newPage = await target.page();
@@ -66,14 +66,14 @@ jobs:
               }
             });
 
-            // Pakistan vs England Match Page Link
-            await page.goto('https://new.touchcric.com/watch-new-zealand-vs-india-3rd-t20-live-cricket-streaming.htm', {
+            // Pakistan vs Sri Lanka 5th Match Link
+            await page.goto('https://new.touchcric.com/watch-pakistan-vs-sri-lanka-tri-series-5th-match-live-cricket-streaming.htm', {
               waitUntil: 'networkidle2'
             });
 
             await new Promise(r => setTimeout(r, 6000));
 
-            // Auto-play without clicking and unmute
+            // Click නොකර Video එක Auto play වී Unmute වන ලෙස සකස් කිරීම
             await page.evaluate(() => {
               window.open = function() { return null; };
 
@@ -87,18 +87,18 @@ jobs:
           EOF
 
           node launch.js > /dev/null 2>&1 &
-          sleep 12
+          sleep 15
 
-          # FFmpeg Video Crop (700x410), Filters, Audio Mix & YouTube RTMP Output (Logo Moved Down: y=50)
+          # FFmpeg Video Crop (700x410), Filters, Audio Mix & Facebook Live RTMP Output
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
             -filter_complex "[0:v]crop=700:410:290:170,scale=1280:720,eq=brightness=0.05:contrast=1.35:saturation=1.6:gamma=1.3,drawtext=text=' RANUWA LIVE ':x=w-tw-10:y=50:fontsize=36:fontcolor=white:box=1:boxcolor=black@1.0:boxborderw=25[v]; [1:a]asetrate=44100*0.93,aresample=44100,volume=0.85[main_audio]; [2:a]volume=0.12[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -map "[v]" -map "[[a]]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -flvflags no_duration_filesize \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/94xy-uqh4-g9hq-gxbz-2hza"
-            
+            -f flv "rtmps://live-api-s.facebook.com:443/rtmp/FB-1093336176794582-0-Ab7gQ8fICRp5exAnMUUYTXT1"
