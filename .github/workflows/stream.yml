@@ -89,15 +89,16 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 15
 
-          # FFmpeg with Advanced Anti-Bot Filters, Pixel Shifting, Heavy EQ & TV Logo
+          # FFmpeg without hflip, using Heavy EQ, Saturation drops, and TV Logo
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,hflip,eq=brightness=-0.05:contrast=1.25:saturation=0.5:gamma=1.15,hue=h=25,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.85,aresample=44100,equalizer=f=1000:width_type=h:width=200:g=-5,volume=0.65[main_audio]; [2:a]volume=0.35[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,eq=brightness=-0.05:contrast=1.25:saturation=0.5:gamma=1.15,hue=h=25,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.85,aresample=44100,equalizer=f=1000:width_type=h:width=200:g=-5,volume=0.65[main_audio]; [2:a]volume=0.35[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
+            
