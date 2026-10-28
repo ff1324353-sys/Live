@@ -67,7 +67,7 @@ jobs:
             });
 
             // Match Page Link
-            await page.goto('https://www.youtube.com/live/u90pwZFxPtE?si=I5TsV_uynPDwp3h-', {
+            await page.goto('https://footfytv.pro/proxy/direct?url=http://103.16.24.4:8083/14.m3u8', {
               waitUntil: 'networkidle2'
             });
 
