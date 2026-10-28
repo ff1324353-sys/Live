@@ -1,4 +1,4 @@
-name: Stream Touchcric Match to Facebook via Chromium Capture
+name: Stream M3U8 Cricket Match to Facebook
 
 on:
   workflow_dispatch:
@@ -10,94 +10,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Install Dependencies & Download Background Audio
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            ffmpeg \
-            xvfb \
-            pulseaudio \
-            alsa-utils \
-            fonts-dejavu-core
-          npm install puppeteer
+          sudo apt-get install -y ffmpeg curl
           
           # Copyright වලින් ආරක්ෂා වීමට Background music එක ඩাউনলোড කරගැනීම
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
-      - name: Start Virtual Display & Launch Puppeteer
+      - name: Start Streaming M3U8 with FFmpeg
         run: |
-          Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
-          export DISPLAY=:99
+          # මෙතන your_m3u8_link_here කියන තැනට ඔයාගේ ඇත්තම m3u8 link එක දාන්න
+          M3U8_URL="your_m3u8_link_here"
 
-          pulseaudio --start || true
-
-          cat << 'EOF' > launch.js
-          const puppeteer = require('puppeteer');
-
-          (async () => {
-            const browser = await puppeteer.launch({
-              headless: false,
-              args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-gpu',
-                '--window-size=1280,720',
-                '--autoplay-policy=no-user-gesture-required',
-                '--start-fullscreen',
-                '--block-new-web-contents'
-              ]
-            });
-
-            const page = await browser.newPage();
-            await page.setViewport({ width: 1280, height: 720 });
-
-            // Ad නිසා අලුතෙන් open වෙන tabs block කිරීම
-            browser.on('targetcreated', async (target) => {
-              if (target.type() === 'page') {
-                const newPage = await target.page();
-                if (newPage && newPage !== page) {
-                  await newPage.close();
-                }
-              }
-            });
-
-            // Match Page Link
-            await page.goto('https://footfytv.pro/proxy/direct?url=http://103.16.24.4:8083/14.m3u8', {
-              waitUntil: 'networkidle2'
-            });
-
-            await new Promise(r => setTimeout(r, 6000));
-
-            // Click නොකර Video එක Auto play වී Unmute වන ලෙස සකස් කිරීම
-            await page.evaluate(() => {
-              window.open = function() { return null; };
-
-              const video = document.querySelector('video');
-              if (video) {
-                video.muted = false;
-                video.volume = 1.0;
-              }
-            });
-          })();
-          EOF
-
-          node launch.js > /dev/null 2>&1 &
-          sleep 15
-
-          # hflip ඉවත් කර, වර්ණ, පැහැදිලි බව සහ ශබ්දය පමණක් වෙනස් කරන ලද FFmpeg Filter එක
           ffmpeg -y \
-            -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
-            -f pulse -i default \
+            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -i "$M3U8_URL" \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,eq=brightness=-0.04:contrast=1.3:saturation=0.55:gamma=1.1,hue=h=15,noise=alls=10:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.93,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-6,volume=0.6[main_audio]; [2:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,eq=brightness=-0.04:contrast=1.3:saturation=0.55:gamma=1.1,hue=h=15,noise=alls=10:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [0:a]asetrate=44100*0.93,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-6,volume=0.6[main_audio]; [1:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
-            -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
+            
