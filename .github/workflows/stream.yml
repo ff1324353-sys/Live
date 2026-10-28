@@ -27,7 +27,7 @@ jobs:
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -i "$M3U8_URL" \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]scale=1278:718:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,eq=brightness=-0.03:contrast=1.28:saturation=0.6:gamma=1.05,hue=h=10,noise=alls=8:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [0:a]asetrate=44100*0.93,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-6,volume=0.6[main_audio]; [1:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]scale=1278:718:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,eq=brightness=-0.03:contrast=1.28:saturation=0.6:gamma=1.05,hue=h=10,noise=alls=8:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=80:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [0:a]asetrate=44100*0.93,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-6,volume=0.6[main_audio]; [1:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
