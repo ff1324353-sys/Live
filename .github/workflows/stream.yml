@@ -1,4 +1,4 @@
-name: Stream Touchcric Match to Facebook via Chromium Capture
+name: Stream via Free Proxy & GitHub Actions
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies & Download Background Audio
+      - name: Install Dependencies & Proxy Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -23,9 +23,11 @@ jobs:
             xvfb \
             pulseaudio \
             alsa-utils \
-            fonts-dejavu-core
+            fonts-dejavu-core \
+            curl \
+            tsocks
           npm install puppeteer
-          
+
           # Background music eka download karaganeema
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
 
@@ -104,16 +106,20 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # කළු තීරු (Black boxes) සම්පූර්ණයෙන්ම ඉවත් කර, Full-Screen Scale, Heavy Noise, Color Shift සහ Audio Echo සහිත FFmpeg කමාන්ඩ් එක
+          # Free Proxy (SOCKS5) හරහා FFmpeg ලයිව් එක යැවීම
+          PROXY_IP="49.13.22.249"
+          PROXY_PORT="10809"
+
           ffmpeg -y \
+            -http_proxy "socks5://$PROXY_IP:$PROXY_PORT" \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
+            -map_metadata -1 \
             -filter_complex "[0:v]scale=1280:720,tblend=all_mode=average,eq=brightness=0.08:contrast=1.80:saturation=1.40:gamma=1.30,hue=h=45:s=1.4,noise=alls=30:allf=t+u,unsharp=11:11:1.2:9:9:0.8,fps=30,setpts=0.998*PTS,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=25:fontsize=36:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=h-35:fontsize=20:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=4[v]; [1:a]asetrate=44100*0.68,aresample=44100,equalizer=f=300:width_type=h:width=1000:g=-40,equalizer=f=6000:width_type=h:width=1000:g=-35,aecho=0.8:0.88:60:0.4,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
-            -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
+            -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2200k -maxrate 2800k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
-            
