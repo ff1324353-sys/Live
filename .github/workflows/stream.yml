@@ -66,7 +66,7 @@ jobs:
               }
             });
 
-            // Aluth Match Page Link eka
+            // Match Page Link
             await page.goto('https://footfytv.pro/watch/4527', {
               waitUntil: 'networkidle2'
             });
@@ -77,7 +77,6 @@ jobs:
             await page.evaluate(async () => {
               window.open = function() { return null; };
 
-              // Server list eken 'Tapmad' kiyana button eka hoyala click kirima
               const buttons = Array.from(document.querySelectorAll('button, a, div.server-item, span'));
               const tapmadBtn = buttons.find(el => el.textContent && el.textContent.toLowerCase().includes('tapmad'));
               
@@ -85,7 +84,6 @@ jobs:
                 tapmadBtn.click();
               }
 
-              // Podi welawak deela video eka un-mute karala fullscreen kirima
               await new Promise(resolve => setTimeout(resolve, 3000));
 
               const video = document.querySelector('video');
@@ -106,12 +104,12 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # FFmpeg streaming command eka (Fingerprint saha Watermark ekka)
+          # Logo (drawtext) eka muluwasinma ain karala, eth video fingerprinting saha audio filters ethulath kala
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.04:contrast=1.5:saturation=1.25:gamma=1.05,hue=h=22:s=1.1,noise=alls=15:allf=t+u,unsharp=5:5:0.8:3:3:0.4,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=70:fontsize=42:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=18[v]; [1:a]asetrate=44100*0.94,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-7,volume=0.55[main_audio]; [2:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.04:contrast=1.5:saturation=1.25:gamma=1.05,hue=h=22:s=1.1,noise=alls=15:allf=t+u,unsharp=5:5:0.8:3:3:0.4,fps=30[v]; [1:a]asetrate=44100*0.94,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-7,volume=0.55[main_audio]; [2:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
