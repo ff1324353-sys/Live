@@ -66,16 +66,27 @@ jobs:
               }
             });
 
-            // Match Page Link
-            await page.goto('https://footfytv.pro/watch/4728', {
+            // Aluth Match Page Link eka
+            await page.goto('https://footfytv.pro/watch/4527', {
               waitUntil: 'networkidle2'
             });
 
             await new Promise(r => setTimeout(r, 6000));
 
-            // Video eka Full Screen kar Unmute kirima saha wena ads ain kirima
-            await page.evaluate(() => {
+            // Tapmad server button eka hoyala click kirima saha video eka fullscreen kirima
+            await page.evaluate(async () => {
               window.open = function() { return null; };
+
+              // Server list eken 'Tapmad' kiyana button eka hoyala click kirima
+              const buttons = Array.from(document.querySelectorAll('button, a, div.server-item, span'));
+              const tapmadBtn = buttons.find(el => el.textContent && el.textContent.toLowerCase().includes('tapmad'));
+              
+              if (tapmadBtn) {
+                tapmadBtn.click();
+              }
+
+              // Podi welawak deela video eka un-mute karala fullscreen kirima
+              await new Promise(resolve => setTimeout(resolve, 3000));
 
               const video = document.querySelector('video');
               if (video) {
@@ -93,9 +104,9 @@ jobs:
           EOF
 
           node launch.js > /dev/null 2>&1 &
-          sleep 15
+          sleep 18
 
-          # Video Fingerprint එක සම්පූර්ණයෙන්ම වෙනස් කිරීමට වර්ණ, පැහැය, ශබ්දය සහ ඩිජිටල් ශබ්දය (noise/blur) වෙනස් කළ FFmpeg ෆිල්ටරය
+          # FFmpeg streaming command eka (Fingerprint saha Watermark ekka)
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
