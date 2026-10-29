@@ -1,18 +1,13 @@
 {
-  "name": "live-cricket-stream",
+  "name": "fb-cricket-streamer",
   "version": "1.0.0",
-  "description": "Live streaming website with real-time viewers",
+  "description": "Stream cricket to FB via Render",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-"dependencies": {
-  "express": "^4.18.2",
-  "node-fetch": "^2.6.9",
-  "socket.io": "^4.6.1",
-  "fluent-ffmpeg": "^2.1.2",
-    "yt-dlp-exec": "latest"
-  
-}
-  
+  "dependencies": {
+    "express": "^4.19.2",
+    "puppeteer": "^22.0.0"
+  }
 }
