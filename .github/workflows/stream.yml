@@ -89,12 +89,12 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 15
 
-          # Enhanced Anti-Copyright FFmpeg Filter (Mirror, Heavy EQ, Noise, Hue, Pitch Shift)
+          # Flip ඉවත් කර, වර්ණ සහ Contrast වැඩි කළ වැඩිදියුණු කළ FFmpeg Filter එක
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,hflip,eq=brightness=-0.08:contrast=1.35:saturation=0.4:gamma=1.2,hue=h=45,noise=alls=15:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.91,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-8,volume=0.55[main_audio]; [2:a]volume=0.45[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=670:370:305:185,scale=1280:720,eq=brightness=0.03:contrast=1.45:saturation=1.2:gamma=1.0,hue=h=15,noise=alls=10:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.91,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-8,volume=0.55[main_audio]; [2:a]volume=0.45[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
