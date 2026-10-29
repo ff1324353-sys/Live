@@ -26,8 +26,8 @@ jobs:
             fonts-dejavu-core
           npm install puppeteer
           
-          # Copyright walin rakenna background music eka download karaganeema
-          curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+          # Soft background music eka download karaganeema
+          curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
         run: |
@@ -66,7 +66,7 @@ jobs:
               }
             });
 
-            // Match Page Link
+            // Match Page Link (Tapmad server eka)
             await page.goto('https://footfytv.pro/watch/4527', {
               waitUntil: 'networkidle2'
             });
@@ -104,12 +104,12 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # Logo (drawtext) eka muluwasinma ain karala, eth video fingerprinting saha audio filters ethulath kala
+          # Mul thibba fixed watermark ekata amatharawa, ehata meheta yana amatha watermark ekak saha hoda fingerprint/audio filters ekathu kala
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.04:contrast=1.5:saturation=1.25:gamma=1.05,hue=h=22:s=1.1,noise=alls=15:allf=t+u,unsharp=5:5:0.8:3:3:0.4,fps=30[v]; [1:a]asetrate=44100*0.94,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-7,volume=0.55[main_audio]; [2:a]volume=0.4[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:contrast=1.45:saturation=1.2:gamma=1.05,hue=h=18:s=1.05,noise=alls=12:allf=t+u,unsharp=5:5:0.6:3:3:0.3,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=70:fontsize=42:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=18,drawtext=text=' LIVE STREAM ':x='mod(t*35, w+200)-100':y=660:fontsize=24:fontcolor=white@0.4:box=1:boxcolor=black@0.2:boxborderw=5[v]; [1:a]asetrate=44100*0.95,aresample=44100,equalizer=f=1400:width_type=h:width=200:g=-9,volume=0.45[main_audio]; [2:a]volume=0.2[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
