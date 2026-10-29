@@ -1,4 +1,4 @@
-name: Stream Touchcric Match to Facebook (Ultra Stable)
+name: Stream Touchcric Match to Facebook (Anti-Copyright Shield)
 
 on:
   workflow_dispatch:
@@ -105,13 +105,13 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # වැරදි ඉන්පුට් නැති පිරිසිදු Stable FFmpeg Command එක
+          # Copyright AI මඟහරින ප්‍රබලම Zoom, Crop, Color Shift සහ Audio Obfuscation සහිත FFmpeg Command එක
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
             -map_metadata -1 \
-            -filter_complex "[0:v]scale=1280:720,tblend=all_mode=average,eq=brightness=0.08:contrast=1.80:saturation=1.40:gamma=1.30,hue=h=45:s=1.4,noise=alls=30:allf=t+u,unsharp=11:11:1.2:9:9:0.8,fps=30,setpts=0.998*PTS,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=25:fontsize=36:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=h-35:fontsize=20:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=4[v]; [1:a]asetrate=44100*0.68,aresample=44100,equalizer=f=300:width_type=h:width=1000:g=-40,equalizer=f=6000:width_type=h:width=1000:g=-35,aecho=0.8:0.88:60:0.4,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]crop=in_w-20:in_h-20:10:10,scale=1280:720,eq=brightness=0.06:contrast=1.90:saturation=1.50:gamma=1.20,hue=h=30:s=1.3,noise=alls=40:allf=t+u,unsharp=13:13:1.5:11:11:0.9,fps=30,setpts=0.995*PTS,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=25:fontsize=36:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=h-35:fontsize=20:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=4[v]; [1:a]asetrate=44100*0.67,aresample=44100,equalizer=f=250:width_type=h:width=800:g=-45,equalizer=f=5000:width_type=h:width=800:g=-40,aecho=0.8:0.85:50:0.35,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 1800k -maxrate 2200k -bufsize 4400k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
