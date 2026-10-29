@@ -1,15 +1,36 @@
-FROM node:18-slim
+FROM node:20-slim
 
-# අවශ්‍ය ලිනක්ස් පැකේජ් සහ කර්ල් (curl) ඉන්ස්ටෝල් කරගැනීම
+# Install necessary packages, Chrome dependencies, Xvfb, Pulseaudio, and FFmpeg
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    xvfb \
+    pulseaudio \
+    alsa-utils \
     curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Shaka Packager ඩවුන්ලෝඩ් කර සර්වර් එකට දාගැනීම
-RUN curl -L https://github.com/shaka-project/shaka-packager/releases/download/v2.6.1/packager-linux-x64 -o /usr/local/bin/packager && \
-    chmod +x /usr/local/bin/packager
+    wget \
+    gnupg \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    libdrm2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxi6 \
+    libxtst6 \
+    libcups2 \
+    libxrandr2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libxss1 \
+    libnspr4 \
+    libnss3 \
+    xdg-utils \
+    fonts-liberation
 
 WORKDIR /app
 
@@ -18,6 +39,5 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+# Start Xvfb virtual display in background and then run node app
+CMD Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 & export DISPLAY=:99 && pulseaudio --start && npm start
