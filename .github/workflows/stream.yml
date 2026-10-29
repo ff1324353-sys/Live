@@ -26,7 +26,7 @@ jobs:
             fonts-dejavu-core
           npm install puppeteer
           
-          # Soft background music eka download karaganeema
+          # Background music eka download karaganeema
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
@@ -104,7 +104,7 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # Mul thibba fixed watermark ekata amatharawa, ehata meheta yana amatha watermark ekak saha hoda fingerprint/audio filters ekathu kala
+          # නිවැරදි කරන ලද FFmpeg filter string එක (Fixed Logo + Moving Watermark + Fingerprint + Audio)
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
