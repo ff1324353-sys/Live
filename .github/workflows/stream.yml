@@ -31,8 +31,9 @@ jobs:
           # Background music eka download karaganeema
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
 
-          # Proxychains configuration සැකසීම
-          sudo bash -c 'cat > /etc/proxychains4.conf << EOL'
+          # Proxychains configuration නිවැරදිව සැකසීම
+          sudo mkdir -p /etc/proxychains4
+          sudo bash -c 'cat << "EOF" > /etc/proxychains4.conf
           strict_chain
           proxy_dns
           remote_dns_subnet 224
@@ -40,7 +41,7 @@ jobs:
           tcp_connect_time_out 8000
           [ProxyList]
           socks5 49.13.22.249 10809
-          EOL
+          EOF'
 
       - name: Start Virtual Display & Launch Puppeteer
         run: |
