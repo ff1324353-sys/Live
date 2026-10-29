@@ -26,7 +26,7 @@ jobs:
             fonts-dejavu-core
           npm install puppeteer
           
-          # Copyright වලින් ආරක්ෂා වීමට Background music එක ඩাউনলোড කරගැනීම
+          # Copyright walin rakenna background music eka download karaganeema
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
       - name: Start Virtual Display & Launch Puppeteer
@@ -56,7 +56,7 @@ jobs:
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
-            // Ad නිසා අලුතෙන් open වෙන tabs block කිරීම
+            // Ads nisa aluthen open wena tabs block kirima
             browser.on('targetcreated', async (target) => {
               if (target.type() === 'page') {
                 const newPage = await target.page();
@@ -73,7 +73,7 @@ jobs:
 
             await new Promise(r => setTimeout(r, 6000));
 
-            // Video එක Full Screen කර Unmute කිරීම සහ වෙනත් Ads අයින් කිරීම
+            // Video eka Full Screen kar Unmute kirima saha wena ads ain kirima
             await page.evaluate(() => {
               window.open = function() { return null; };
 
@@ -82,7 +82,6 @@ jobs:
                 video.muted = false;
                 video.volume = 1.0;
                 
-                // වීඩියෝ ප්ලේයර් එක විතරක් full screen කිරීම
                 if (video.requestFullscreen) {
                   video.requestFullscreen();
                 } else if (video.webkitRequestFullscreen) {
@@ -96,16 +95,15 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 15
 
-          # සෘජුවම 1280x720 Screen එක Capture කරමින් Facebook වෙත Stream කිරීම
+          # Logo eka pahalata aran size eka loku kala, audio filters thawa diunu kala
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:contrast=1.45:saturation=1.2:gamma=1.0,hue=h=15,noise=alls=10:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15[v]; [1:a]asetrate=44100*0.91,aresample=44100,equalizer=f=1200:width_type=h:width=250:g=-8,volume=0.55[main_audio]; [2:a]volume=0.45[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]scale=1280:720,eq=brightness=0.03:contrast=1.45:saturation=1.2:gamma=1.0,hue=h=15,noise=alls=10:allf=t+u,fps=30,drawtext=text=' SPORT RANUWA ':x=20:y=20:fontsize=42:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=18[v]; [1:a]asetrate=44100*0.93,aresample=44100,equalizer=f=1000:width_type=h:width=300:g=-6,volume=0.6[main_audio]; [2:a]volume=0.35[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
-            
