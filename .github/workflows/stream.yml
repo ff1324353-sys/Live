@@ -104,12 +104,12 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # Ultimate PTS, Frame Blending, Heavy Noise, Multi-Color Shifting සහ Echo Audio සහිත අවසාන FFmpeg කමාන්ඩ් එක
+          # කළු තීරු (Black boxes) සම්පූර්ණයෙන්ම ඉවත් කර, Full-Screen Scale, Heavy Noise, Color Shift සහ Audio Echo සහිත FFmpeg කමාන්ඩ් එක
           ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
-            -filter_complex "[0:v]scale=1340:750,crop=1280:720,tblend=all_mode=average,eq=brightness=0.09:contrast=1.85:saturation=1.45:gamma=1.35,hue=h=45:s=1.4,noise=alls=35:allf=t+u,unsharp=13:13:1.4:11:11:0.9,fps=30,setpts=0.998*PTS,drawbox=x=0:y=0:w=1280:h=55:color=black@0.95:t=fill,drawbox=x=0:y=665:w=1280:h=55:color=black@0.95:t=fill,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=60:fontsize=42:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=18,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=670:fontsize=22:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=5[v]; [1:a]asetrate=44100*0.68,aresample=44100,equalizer=f=300:width_type=h:width=1000:g=-40,equalizer=f=6000:width_type=h:width=1000:g=-35,aecho=0.8:0.88:60:0.4,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -filter_complex "[0:v]scale=1280:720,tblend=all_mode=average,eq=brightness=0.08:contrast=1.80:saturation=1.40:gamma=1.30,hue=h=45:s=1.4,noise=alls=30:allf=t+u,unsharp=11:11:1.2:9:9:0.8,fps=30,setpts=0.998*PTS,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=25:fontsize=36:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=h-35:fontsize=20:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=4[v]; [1:a]asetrate=44100*0.68,aresample=44100,equalizer=f=300:width_type=h:width=1000:g=-40,equalizer=f=6000:width_type=h:width=1000:g=-35,aecho=0.8:0.88:60:0.4,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
             -map "[v]" -map "[a]" \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
