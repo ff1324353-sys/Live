@@ -1,4 +1,4 @@
-Name: Stream Touchcric Match to Facebook via Chromium Capture
+name: Stream Touchcric Match to Facebook via Chromium Capture
 
 on:
   workflow_dispatch:
