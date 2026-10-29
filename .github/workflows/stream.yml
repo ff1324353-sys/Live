@@ -25,11 +25,22 @@ jobs:
             alsa-utils \
             fonts-dejavu-core \
             curl \
-            tsocks
+            proxychains4
           npm install puppeteer
 
           # Background music eka download karaganeema
           curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+
+          # Proxychains configuration සැකසීම
+          sudo bash -c 'cat > /etc/proxychains4.conf << EOL'
+          strict_chain
+          proxy_dns
+          remote_dns_subnet 224
+          tcp_read_time_out 15000
+          tcp_connect_time_out 8000
+          [ProxyList]
+          socks5 49.13.22.249 10809
+          EOL
 
       - name: Start Virtual Display & Launch Puppeteer
         run: |
@@ -106,12 +117,8 @@ jobs:
           node launch.js > /dev/null 2>&1 &
           sleep 18
 
-          # Free Proxy (SOCKS5) හරහා FFmpeg ලයිව් එක යැවීම
-          PROXY_IP="49.13.22.249"
-          PROXY_PORT="10809"
-
-          ffmpeg -y \
-            -http_proxy "socks5://$PROXY_IP:$PROXY_PORT" \
+          # Proxychains හරහා FFmpeg ලයිව් එක ප්‍රොක්සි කර යැවීම
+          proxychains4 ffmpeg -y \
             -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
             -f pulse -i default \
             -stream_loop -1 -i bgmusic.mp3 \
@@ -123,3 +130,4 @@ jobs:
             -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
             -flvflags no_duration_filesize \
             -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
+            
