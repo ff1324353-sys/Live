@@ -1,7 +1,7 @@
-name: YouTube Live Streamer
+name: Stream Touchcric Match to Facebook (Stable Fix)
 
 on:
-  workflow_dispatch: # අපිට ඕන වෙලාවකට Manual එකෙන් Run කරන්න පුළුවන් වෙන්න
+  workflow_dispatch:
 
 jobs:
   stream:
@@ -10,23 +10,111 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y \
+            ffmpeg \
+            xvfb \
+            pulseaudio \
+            alsa-utils \
+            fonts-dejavu-core \
+            curl
+          npm install puppeteer
 
-      - name: Start Live Stream to YouTube
-        env:
-          YT_KEY: ${{ secrets.YT_KEY }}
+          # Background music eka download karaganeema
+          curl -L -o bgmusic.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+
+      - name: Start Virtual Display & Launch Puppeteer
         run: |
-          echo "Starting FFmpeg Live Stream..."
-          
-          ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-          -fflags +discardcorrupt+genpts -probesize 15M -analyzeduration 5M \
-          -i "https://s1.itcnbd.live/T-Sports-HD/tracks-v1a1/mono.m3u8" \
-          -vf "fps=25,scale=1280:720,crop=in_w-16:in_h-16:8:8,eq=saturation=1.15:brightness=0.02,noise=alls=8:allf=t+u,drawbox=x=iw-w-15:y=10:w=320:h=150:color=black@0.9:t=fill" \
-          -af "treble=g=3,bass=g=-2,aresample=async=1:min_hard_comp=0.100000:first_pts=0" \
-          -c:v libx264 -preset ultrafast -tune zerolatency -fps_mode cfr -g 50 \
-          -b:v 700k -maxrate 700k -bufsize 1400k -pix_fmt yuv420p \
-          -c:a aac -b:a 96k -ar 44100 -ac 2 -max_muxing_queue_size 99999 \
-          -f flv "rtmp://a.rtmp.youtube.com/live2/$YT_KEY"
+          Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
+          export DISPLAY=:99
+
+          pulseaudio --start || true
+
+          cat << 'EOF' > launch.js
+          const puppeteer = require('puppeteer');
+
+          (async () => {
+            const browser = await puppeteer.launch({
+              headless: false,
+              args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-gpu',
+                '--window-size=1280,720',
+                '--autoplay-policy=no-user-gesture-required',
+                '--start-fullscreen',
+                '--block-new-web-contents'
+              ]
+            });
+
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 720 });
+
+            // Ads nisa aluthen open wena tabs block kirima
+            browser.on('targetcreated', async (target) => {
+              if (target.type() === 'page') {
+                const newPage = await target.page();
+                if (newPage && newPage !== page) {
+                  await newPage.close();
+                }
+              }
+            });
+
+            // Match Page Link
+            await page.goto('https://footfytv.pro/watch/4527', {
+              waitUntil: 'networkidle2'
+            });
+
+            await new Promise(r => setTimeout(r, 6000));
+
+            // Tapmad server button click & fullscreen
+            await page.evaluate(async () => {
+              window.open = function() { return null; };
+
+              const buttons = Array.from(document.querySelectorAll('button, a, div.server-item, span'));
+              const tapmadBtn = buttons.find(el => el.textContent && el.textContent.toLowerCase().includes('tapmad'));
+              
+              if (tapmadBtn) {
+                tapmadBtn.click();
+              }
+
+              await new Promise(resolve => setTimeout(resolve, 3000));
+
+              const video = document.querySelector('video');
+              if (video) {
+                video.muted = false;
+                video.volume = 1.0;
+                
+                if (video.requestFullscreen) {
+                  video.requestFullscreen();
+                } else if (video.webkitRequestFullscreen) {
+                  video.webkitRequestFullscreen();
+                }
+              }
+            });
+          })();
+          EOF
+
+          node launch.js > /dev/null 2>&1 &
+          sleep 18
+
+          # කනෙක්ෂන් එක නොකැඩී ස්ථාවරව දුවන FFmpeg Command එක
+          ffmpeg -y \
+            -f x11grab -framerate 30 -video_size 1280x720 -i :99.0 \
+            -f pulse -i default \
+            -stream_loop -1 -i bgmusic.mp3 \
+            -map_metadata -1 \
+            -filter_complex "[0:v]crop=in_w-20:in_h-20:10:10,scale=1280:720,eq=brightness=0.06:contrast=1.90:saturation=1.50:gamma=1.20,hue=h=30:s=1.3,noise=alls=40:allf=t+u,unsharp=13:13:1.5:11:11:0.9,fps=30,setpts=0.995*PTS,drawtext=text=' SPORT RANUWA ':x=w-tw-25:y=25:fontsize=36:fontcolor=white:box=1:boxcolor=red@0.9:boxborderw=15,drawtext=text=' LIVE CRICKET STREAM 24/7 ':x='mod(t*55, w+200)-100':y=h-35:fontsize=20:fontcolor=white@0.95:box=1:boxcolor=black@0.8:boxborderw=4[v]; [1:a]asetrate=44100*0.67,aresample=44100,equalizer=f=250:width_type=h:width=800:g=-45,equalizer=f=5000:width_type=h:width=800:g=-40,aecho=0.8:0.85:50:0.35,volume=0.02[main_audio]; [2:a]volume=0.01[bg_audio]; [main_audio][bg_audio]amix=inputs=2:duration=first[a]" \
+            -map "[v]" -map "[a]" \
+            -c:v libx264 -preset ultrafast -pix_fmt yuv420p -g 60 -keyint_min 60 -b:v 1500k -maxrate 1800k -bufsize 3600k \
+            -c:a aac -b:a 128k -ar 44100 -ac 2 \
+            -flvflags no_duration_filesize \
+            -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${{ secrets.FB_KEY }}"
+            

@@ -1,0 +1,26 @@
+<svg width="200" height="90" viewBox="0 0 200 90" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#1f2937" stop-opacity="0.95" />
+    </linearGradient>
+    
+    <!-- Red Accent Gradient -->
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded Box Background -->
+  <rect x="2" y="2" width="196" height="86" rx="12" fill="url(#bgGrad)" stroke="#374151" stroke-width="2" />
+
+  <!-- Live Pulsing Red Dot -->
+  <circle cx="24" cy="45" r="7" fill="url(#redGrad)">
+    <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+  </circle>
+
+  <!-- Text: LIVE SL -->
+  <text x="44" y="53" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="24" fill="#ffffff" letter-spacing="1">LIVE<tspan fill="#ef4444" dx="6">SL</tspan></text>
+</svg>

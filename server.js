@@ -17,7 +17,7 @@ app.use(express.json());
 
 let activeStreamProcess = null;
 
-// ප්‍රොක්සි රූට් එක
+// ප්‍රොක්සි රූට් එක (Stream link එක rewrite කර ගැනීමට)
 app.get('/proxy', async (req, res) => {
     let targetUrl = req.query.url;
     if (!targetUrl) return res.status(400).send('Missing url');
@@ -56,98 +56,97 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-// YouTube එකට ටයිමර් එකත් සමඟ HD Quality එකෙන් ලයිව් එක පටන් ගන්න රූට් එක
-app.post('/start-yt-live', (req, res) => {
-    const streamKey = req.body.streamKey || "Xpay-4reg-u6ya-ha0a-b239";
-    const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-4";
-
+// YouTube Live එක Copyright වලින් ආරක්ෂා කරමින් Dynamic Elements සමඟ පටන් ගන්න රූට් එක
+app.post('/start-live', (req, res) => {
     if (activeStreamProcess) {
         return res.status(400).send('A stream is already running! Stop it first.');
     }
 
-    const ytRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${streamKey}`;
+    const streamUrl = "https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8";
+    
+    // **ඔයාගේ YouTube Stream Key එක මෙතැනට දාන්න**
+    const youtubeStreamKey = "94xy-uqh4-g9hq-gxbz-2hza"; 
+    const youtubeRtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${youtubeStreamKey}`;
 
-    // ශ්‍රී ලංකා වෙලාව (GMT+5:30) ලබා ගැනීම
-    const now = new Date();
-    const lkTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
-    const currentHours = lkTime.getHours();
-    const currentMinutes = lkTime.getMinutes();
+    console.log('Starting Anti-Copyright YouTube Live streaming with Dynamic Elements from:', streamUrl);
 
-    // මැච් පටන් ගන්න වෙලාව: සවස 7.10 (පැය 19, මිනිත්තු 10)
-    const targetHours = 19;
-    const targetMinutes = 10;
+    function startStream() {
+        if (activeStreamProcess) {
+            try { activeStreamProcess.kill('SIGKILL'); } catch(e) {}
+            activeStreamProcess = null;
+        }
 
-    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const targetTimeInMinutes = targetHours * 60 + targetMinutes;
-
-    let command;
-
-    if (currentTimeInMinutes < targetTimeInMinutes) {
-        console.log('Match time not reached yet. Starting Standby Screen with Text...');
-        
-        // 7.10 වෙනතුරු කළු ස්ක්‍රීන් එකක් මත "LPL MATCH START 7.10 P.M" පෙන්නන ෆිල්ටර් එක
-        command = ffmpeg('color=c=black:s=1280x720:r=25')
-            .inputFormat('lavfi')
-            .outputOptions([
-                '-vf', 'drawtext=text=\'LPL MATCH START 7.10 P.M\':fontcolor=white:fontsize=50:x=(w-text_w)/2:y=(h-text_h)/2',
-                '-c:v', 'libx264',
-                '-preset', 'ultrafast',
-                '-pix_fmt', 'yuv420p',
-                '-f', 'flv'
-            ])
-            .output(ytRtmpUrl);
-
-    } else {
-        console.log('Match time reached! Starting High Quality YouTube HD Stream...');
-        
-        // 7.10 පසුව ඔරිජිනල් HD ලයිව් ස්ට්‍රීම් එක පටන් ගැනීම
-        command = ffmpeg(streamUrl)
+        const command = ffmpeg(streamUrl)
             .inputOptions([
+                '-re',
                 '-reconnect 1',
                 '-reconnect_streamed 1',
                 '-reconnect_delay_max 5',
-                '-fflags +discardcorrupt+genpts',
-                '-probesize 20M',
-                '-analyzeduration 10M'
+                '-fflags +discardcorrupt+genpts+nobuffer',
+                '-probesize 50M',
+                '-analyzeduration 20M'
             ])
             .outputOptions([
-                '-vf', 'fps=30,scale=1280:720,crop=in_w-12:in_h-12:6:6',
-                '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+                '-sws_flags', 'fast_bilinear',
+                
+                // **Advanced Anti-Copyright & Dynamic Moving Filters:**
+                '-vf', 'scale=1280:720,eq=saturation=1.12:contrast=1.18,' +
+                       // 1. Original TV Channel Logo එක වසන (Hide කරන) කළු Box එක
+                       'drawbox=x=1060:y=10:w=210:h=95:color=black@0.98:t=fill,' +
+                       'drawtext=text=LIVE_24_7:fontcolor=yellow:fontsize=18:x=1115:y=45,' +
+                       
+                       // 2. පහළින් වමේ සිට දකුණට චලනය වන Dynamic Scrolling Ticker Text (AI Detection මඟහරින්න)
+                       'drawbox=x=0:y=665:w=1280:h=40:color=black@0.7:t=fill,' +
+                       'drawtext=text="● LIVE CRICKET MATCH STREAMING - ENJOY THE GAME":fontcolor=white:fontsize=16:x="1280-mod(t*120\\, 1600)":y=675',
+            
+                // **Anti-Copyright Audio Filters:**
+                '-af', 'atempo=1.01,rubberband=pitch=1.05:tempo=1.0',
+
+                '-threads', '4',               
+                '-r', '25',                    
                 '-c:v', 'libx264',
-                '-preset', 'veryfast',
+                '-preset', 'ultrafast',        
                 '-tune', 'zerolatency',
-                '-fps_mode', 'cfr',
-                '-g', '60',
-                '-b:v', '1800k',
-                '-maxrate', '2200k',
-                '-bufsize', '3600k',
+                '-b:v', '1000k',               
+                '-maxrate', '1400k',
+                '-bufsize', '2800k',
                 '-pix_fmt', 'yuv420p',
+                '-g', '50',                    
                 '-c:a', 'aac',
                 '-b:a', '128k',
                 '-ar', '44100',
-                '-ac', '2',
-                '-max_muxing_queue_size', '99999',
+                '-max_muxing_queue_size', '9999',
                 '-f', 'flv'
             ])
-            .output(ytRtmpUrl);
+            .output(youtubeRtmpUrl)
+            .on('start', (commandLine) => {
+                console.log('Protected FFmpeg Stream spawned to YouTube with Dynamic Ticker:', commandLine);
+            })
+            .on('error', (err) => {
+                console.error('Streaming error encountered:', err.message);
+                if (activeStreamProcess) {
+                    setTimeout(() => {
+                        console.log('Attempting to restart stream after error...');
+                        startStream();
+                    }, 3000);
+                }
+            })
+            .on('end', () => {
+                console.log('Streaming finished. Restarting automatically...');
+                if (activeStreamProcess) {
+                    setTimeout(() => {
+                        startStream();
+                    }, 2000);
+                }
+            });
+
+        command.run();
+        activeStreamProcess = command;
     }
 
-    command.on('start', (commandLine) => {
-        console.log('FFmpeg Stream spawned:', commandLine);
-    })
-    .on('error', (err) => {
-        console.error('YouTube Streaming error:', err.message);
-        activeStreamProcess = null;
-    })
-    .on('end', () => {
-        console.log('YouTube Streaming finished.');
-        activeStreamProcess = null;
-    });
+    startStream();
 
-    command.run();
-    activeStreamProcess = command;
-
-    res.send('<h2>Smart Time-based HD Live started successfully! 🚀</h2>');
+    res.send('<h2>Protected YouTube Live stream with Dynamic Ticker started successfully! 🚀🔥</h2>');
 });
 
 // ලයිව් එක නතර කරන්න රූට් එක
